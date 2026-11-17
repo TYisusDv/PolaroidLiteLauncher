@@ -1,0 +1,16 @@
+R_DEF: Internal format may change without notice
+local
+drawable brand_netflix
+drawable ic_remote_control
+drawable ic_remote_copy
+drawable ic_remote_ip
+drawable ic_remote_lock
+drawable ic_remote_network
+drawable ic_remote_refresh
+drawable ic_source_av
+drawable ic_source_hdmi
+drawable ic_source_tv
+drawable tile_background
+string remote_accessibility_description
+style AppTheme
+xml remote_accessibility_service

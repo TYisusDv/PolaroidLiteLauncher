@@ -1,0 +1,7 @@
+tv.polaroid.litehome.app-pngs-0 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/generated/res/pngs/debug
+tv.polaroid.litehome.app-resValues-1 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/generated/res/resValues/debug
+tv.polaroid.litehome.app-packageDebugResources-2 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
+tv.polaroid.litehome.app-packageDebugResources-3 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
+tv.polaroid.litehome.app-debug-4 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/intermediates/merged_res/debug/mergeDebugResources
+tv.polaroid.litehome.app-debug-5 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/debug/res
+tv.polaroid.litehome.app-main-6 /home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/res

@@ -1,0 +1,12 @@
+<resources>
+    <string name="remote_accessibility_description">Permite que el control web use Atrás e Inicio en otras apps y navegue por los elementos accesibles de la pantalla. La navegación ocurre localmente en la TV.</string>
+    <style name="AppTheme" parent="android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#9CCBFF</item>
+        <item name="android:windowActionModeOverlay">true</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:navigationBarColor">#0B0E14</item>
+        <item name="android:statusBarColor">#0B0E14</item>
+        <item name="android:windowBackground">#0B0E14</item>
+    </style>
+</resources>

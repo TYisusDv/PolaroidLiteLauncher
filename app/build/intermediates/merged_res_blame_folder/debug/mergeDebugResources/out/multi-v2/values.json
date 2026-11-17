@@ -1,0 +1,51 @@
+{
+    "logs": [
+        {
+            "outputFile": "/home/tyisusdv/Documents/Codex/2026-10-25/tengo-una-tele-android-vieja-me/work/toolchain/gradle-user/daemon/8.7/tv.polaroid.litehome.app-mergeDebugResources-2:/values/values.xml",
+            "map": [
+                {
+                    "source": "/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/res/values/styles.xml",
+                    "from": {
+                        "startLines": "1",
+                        "startColumns": "4",
+                        "startOffsets": "16",
+                        "endLines": "9",
+                        "endColumns": "12",
+                        "endOffsets": "521"
+                    },
+                    "to": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endLines": "10",
+                        "endColumns": "12",
+                        "endOffsets": "560"
+                    }
+                }
+            ]
+        },
+        {
+            "outputFile": "tv.polaroid.litehome.app-mergeDebugResources-2:/values/values.xml",
+            "map": [
+                {
+                    "source": "/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/res/values/styles.xml",
+                    "from": {
+                        "startLines": "1,-1",
+                        "startColumns": "4,-1",
+                        "startOffsets": "16,-1",
+                        "endColumns": "217,-1",
+                        "endOffsets": "229,-1"
+                    },
+                    "to": {
+                        "startLines": "2,3",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,273",
+                        "endLines": "2,11",
+                        "endColumns": "217,12",
+                        "endOffsets": "268,778"
+                    }
+                }
+            ]
+        }
+    ]
+}

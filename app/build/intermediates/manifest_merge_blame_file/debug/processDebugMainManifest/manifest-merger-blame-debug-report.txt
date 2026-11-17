@@ -1,0 +1,102 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="tv.polaroid.litehome"
+4    android:versionCode="21"
+5    android:versionName="3.7" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="24"
+9        android:targetSdkVersion="28" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:2:5-67
+11-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:2:22-64
+12    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+12-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:3:5-80
+12-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:3:22-77
+13
+14    <application
+14-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:4:5-40:19
+15        android:allowBackup="false"
+15-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:5:9-36
+16        android:debuggable="true"
+17        android:extractNativeLibs="false"
+18        android:label="Polaroid Lite Home"
+18-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:6:9-43
+19        android:theme="@style/AppTheme" >
+19-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:7:9-40
+20        <activity
+20-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:8:9-26:20
+21            android:name="tv.polaroid.litehome.HomeActivity"
+21-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:9:13-41
+22            android:configChanges="keyboardHidden|orientation|screenSize"
+22-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:10:13-74
+23            android:exported="true"
+23-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:11:13-36
+24            android:screenOrientation="landscape" >
+24-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:12:13-50
+25            <intent-filter android:priority="100" >
+25-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:13:13-17:29
+25-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:13:28-50
+26                <action android:name="android.intent.action.MAIN" />
+26-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:14:17-69
+26-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:14:25-66
+27
+28                <category android:name="android.intent.category.HOME" />
+28-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:15:17-73
+28-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:15:27-70
+29                <category android:name="android.intent.category.DEFAULT" />
+29-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:16:17-76
+29-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:16:27-73
+30            </intent-filter>
+31            <intent-filter>
+31-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:18:13-21:29
+32                <action android:name="android.intent.action.MAIN" />
+32-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:14:17-69
+32-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:14:25-66
+33
+34                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+34-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:20:17-86
+34-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:20:27-83
+35            </intent-filter>
+36            <intent-filter>
+36-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:22:13-25:29
+37                <action android:name="android.intent.action.MAIN" />
+37-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:14:17-69
+37-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:14:25-66
+38
+39                <category android:name="android.intent.category.LAUNCHER" />
+39-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:24:17-77
+39-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:24:27-74
+40            </intent-filter>
+41        </activity>
+42
+43        <service
+43-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:27:9-39:19
+44            android:name="tv.polaroid.litehome.RemoteAccessibilityService"
+44-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:28:13-55
+45            android:description="@string/remote_accessibility_description"
+45-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:30:13-75
+46            android:exported="true"
+46-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:32:13-36
+47            android:label="Polaroid Lite Remote"
+47-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:29:13-49
+48            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" >
+48-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:31:13-79
+49            <intent-filter>
+49-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:33:13-35:29
+50                <action android:name="android.accessibilityservice.AccessibilityService" />
+50-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:34:17-92
+50-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:34:25-89
+51            </intent-filter>
+52
+53            <meta-data
+53-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:36:13-38:72
+54                android:name="android.accessibilityservice"
+54-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:37:17-60
+55                android:resource="@xml/remote_accessibility_service" />
+55-->/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/src/main/AndroidManifest.xml:38:17-69
+56        </service>
+57    </application>
+58
+59</manifest>

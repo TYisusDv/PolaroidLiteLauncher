@@ -1,0 +1,16 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'tv.polaroid.litehome'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'tv.polaroid.litehome'
+        minSdk 24
+        targetSdk 28
+        versionCode 22
+        versionName '3.8'
+    }
+}
