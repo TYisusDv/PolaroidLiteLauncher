@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    strings.xml — Français (fr)
+
+    Traduction complète : chaque clé de la fichier de base
+    (app/src/main/res/values/strings.xml) doit exister ici.
+    scripts/check-i18n-completeness.sh le vérifie dans la CI — sinon Android
+    revient silencieusement au texte anglais.
+    Les placeholders de format (%1$s) doivent correspondre à la base.
+-->
+<resources>
+
+    <!-- ── App-wide ────────────────────────────────────────────── -->
+    <string name="app_name">PhairPlay</string>
+
+    <!-- ── Navigation ──────────────────────────────────────────── -->
+    <string name="nav_home">Accueil</string>
+    <string name="nav_settings">Paramètres</string>
+
+    <!-- ── HomeFragment ────────────────────────────────────────── -->
+    <string name="home_title">Prêt pour les connexions</string>
+    <!-- %1$s = device name shown in sender pickers -->
+    <string name="home_device_visible_as">Visible sous le nom : %1$s</string>
+
+    <!-- ── Protocol names ──────────────────────────────────────── -->
+    <string name="protocol_airplay">AirPlay</string>
+    <string name="protocol_miracast">Miracast</string>
+    <string name="protocol_cast">Cast</string>
+    <string name="protocol_dlna">DLNA</string>
+
+    <!-- ── Protocol states (shown in status cards) ─────────────── -->
+    <string name="protocol_state_disabled">Désactivé</string>
+    <string name="protocol_state_advertising">En attente…</string>
+    <string name="protocol_state_connected">Connecté</string>
+    <string name="protocol_state_error">Erreur</string>
+
+    <!-- ── Protocol card detail lines ──────────────────────────── -->
+    <string name="protocol_detail_disabled">Activez-le dans les paramètres</string>
+    <string name="protocol_detail_service_stopped">Démarrer le service pour diffuser</string>
+    <string name="protocol_detail_restarting">Redémarrage du récepteur…</string>
+    <string name="protocol_detail_waiting">En attente de l\'émetteur…</string>
+    <!-- %1$s = sender display name -->
+    <string name="protocol_detail_connected">Diffusion depuis %1$s</string>
+    <string name="protocol_detail_error">Vérifiez les paramètres Wi-Fi</string>
+
+    <!-- ── Service states (header badge) ───────────────────────── -->
+    <string name="service_state_running">En marche</string>
+    <string name="service_state_stopped">Arrêté</string>
+    <string name="service_state_restarting">Redémarrage…</string>
+    <string name="service_state_error">Erreur</string>
+
+    <!-- ── Section headers ─────────────────────────────────────── -->
+    <string name="section_protocols">Protocoles</string>
+    <string name="section_controls">Contrôle du service</string>
+
+    <!-- ── Control buttons ─────────────────────────────────────── -->
+    <string name="action_start">Démarrer</string>
+    <string name="action_stop">Arrêter</string>
+    <string name="action_restart">Redémarrer</string>
+
+    <!-- ── Notification ────────────────────────────────────────── -->
+    <string name="notification_channel_name">Service PhairPlay</string>
+    <string name="notification_channel_description">Notification persistante du service récepteur AirPlay/Miracast/Cast/DLNA</string>
+    <string name="notification_status_running">Récepteur actif — diffusion sur le réseau</string>
+    <string name="notification_status_stopped">Récepteur arrêté</string>
+    <!-- %1$s = sender device name -->
+    <string name="notification_status_streaming">Diffusion depuis %1$s</string>
+
+    <!-- ── Settings section headers ────────────────────────────── -->
+    <string name="settings_section_display">Affichage</string>
+    <string name="settings_section_protocols">Protocoles</string>
+    <string name="settings_section_airplay">AirPlay</string>
+    <string name="settings_section_service">Service</string>
+    <string name="settings_section_developer">Développeur</string>
+    <string name="settings_section_about">À propos</string>
+
+    <!-- ── Settings row labels ─────────────────────────────────── -->
+    <string name="setting_display_name">Nom de l\'appareil</string>
+    <string name="setting_display_name_system_default">Utilisation du nom d\'appareil du système</string>
+    <string name="setting_display_name_dialog_hint">Laisser vide pour utiliser le nom d\'appareil du système</string>
+    <string name="setting_display_name_reset">Réinitialiser</string>
+    <!-- %1$s = the actual mDNS-registered name (may differ from entered name on collision) -->
+    <string name="setting_display_name_collision_note">Enregistré sous : %1$s</string>
+    <string name="setting_airplay_enabled">Récepteur AirPlay</string>
+    <string name="setting_airplay_subtitle">Accepter les connexions depuis macOS</string>
+    <string name="setting_miracast_enabled">Récepteur Miracast</string>
+    <string name="setting_miracast_subtitle">Accepter les connexions depuis Windows et Android</string>
+    <string name="setting_cast_enabled">Récepteur Google Cast</string>
+    <string name="setting_cast_subtitle">Accepter les connexions depuis Chrome et Android</string>
+    <string name="setting_dlna_enabled">MediaRenderer DLNA</string>
+    <string name="setting_dlna_subtitle">Apparaître dans Windows, VLC et les applications de contrôle UPnP</string>
+    <string name="setting_mirror_audio">Audio miroir</string>
+    <string name="setting_mirror_audio_subtitle">Diffuser le son du Mac pendant le mirroring</string>
+    <string name="setting_pin_auth">Exiger un code d\'appairage</string>
+    <string name="setting_pin_auth_subtitle">Afficher un code sur la TV à saisir pour se connecter</string>
+    <string name="setting_start_on_boot">Démarrer au démarrage</string>
+    <string name="setting_debug_overlay">Superposition de débogage</string>
+    <string name="setting_debug_overlay_subtitle">Afficher les FPS, la file d\'attente et les statistiques de perte pendant la diffusion</string>
+    <string name="setting_force_high_res">Résolution supérieure (1440p)</string>
+    <string name="setting_force_high_res_subtitle">Mirroring plus net ; utilise plus de CPU. Désactivé = 1080p</string>
+    <string name="setting_version">Version</string>
+    <string name="setting_reset_defaults">Réinitialiser les paramètres</string>
+
+    <!-- ── Waiting screen (legacy, used by WaitingScreen view) ─── -->
+    <string name="waiting_title">Prêt pour AirPlay</string>
+    <string name="waiting_subtitle">Ouvrez AirPlay sur votre Mac et sélectionnez cet appareil</string>
+    <string name="waiting_device_label">Cet appareil :</string>
+    <string name="streaming_hint">Appuyez sur Retour pour arrêter la diffusion</string>
+
+    <!-- ── Now playing (audio-only screen) ─────────────────────── -->
+    <string name="now_playing_audio">Lecture audio</string>
+    <!-- %1$s = audio source -->
+    <string name="now_playing_from">Audio depuis %1$s</string>
+
+    <!-- ── Pairing PIN (access control) ─────────────────────────── -->
+    <string name="pairing_pin_title">Code d\'appairage AirPlay</string>
+    <string name="pairing_pin_hint">Saisissez ce code sur votre appareil pour vous connecter</string>
+
+    <!-- ── Error messages ──────────────────────────────────────── -->
+    <string name="error_network_unavailable">Aucune connexion Wi-Fi. Veuillez vous connecter au Wi-Fi.</string>
+    <string name="error_mdns_failed">Échec de l\'annonce réseau.</string>
+    <string name="error_wifi_p2p_unavailable">Miracast n\'est pas pris en charge sur cet appareil.</string>
+    <string name="error_cast_unavailable">Google Cast nécessite les services Google Play (indisponibles sur cet appareil).</string>
+
+    <!-- ── Accessibility ───────────────────────────────────────── -->
+    <string name="content_desc_airplay_icon">Icône du protocole AirPlay</string>
+    <string name="content_desc_miracast_icon">Icône du protocole Miracast</string>
+    <string name="content_desc_cast_icon">Icône du protocole Google Cast</string>
+    <string name="content_desc_dlna_icon">Icône du protocole DLNA</string>
+    <string name="content_desc_status_dot">Indicateur d\'état</string>
+
+    <!-- ── Écran de diagnostic (M14) ────────────────────────────────────── -->
+    <string name="diagnostics_title">Diagnostic PhairPlay</string>
+    <string name="diagnostics_device">Appareil</string>
+    <string name="diagnostics_address">Adresse locale</string>
+    <string name="diagnostics_version">Version</string>
+    <string name="diagnostics_platform">Plateforme</string>
+    <string name="diagnostics_service">Service</string>
+    <string name="diagnostics_section_protocols">Protocoles</string>
+    <string name="diagnostics_section_ports">Ports</string>
+    <string name="diagnostics_section_session">Session active</string>
+    <string name="diagnostics_session_none">rien n\'est en cours de diffusion</string>
+    <string name="diagnostics_section_self_test">Auto-test</string>
+    <string name="diagnostics_unknown">inconnu</string>
+    <string name="diagnostics_port_dlna_description">Description DLNA</string>
+    <string name="diagnostics_port_ssdp">SSDP</string>
+    <string name="diagnostics_selftest_description">Serveur de description</string>
+    <string name="diagnostics_selftest_ssdp">Multicast SSDP</string>
+    <string name="diagnostics_selftest_airplay_port">Port AirPlay</string>
+    <string name="diagnostics_selftest_process">Processus de l\'application</string>
+    <string name="diagnostics_status_ok">OK</string>
+    <string name="diagnostics_status_failed">échec</string>
+    <string name="diagnostics_not_run_yet">pas encore exécuté</string>
+    <!-- %1$s = l\'adresse trouvée -->
+    <string name="diagnostics_reason_no_address">aucune adresse IPv4 utilisable (%1$s)</string>
+    <!-- %1$s = le point de terminaison, p. ex. 127.0.0.1:7000 -->
+    <string name="diagnostics_reason_no_listener">aucun écouteur sur %1$s</string>
+    <string name="diagnostics_reason_port_unknown">port inconnu — aucune réponse SSDP</string>
+    <!-- %1$s = le groupe multicast, %2$d = le délai en millisecondes -->
+    <string name="diagnostics_reason_no_ssdp_answer">aucune réponse de %1$s en %2$d ms</string>
+    <!-- %1$s = la raison de l\'échec de l\'ouverture du socket -->
+    <string name="diagnostics_reason_socket_failed">échec du socket multicast : %1$s</string>
+    <string name="diagnostics_reason_not_measured">non mesuré</string>
+    <!-- %1$d = le statut HTTP, %2$d = le nombre d\'octets de la réponse -->
+    <!-- %1$d = le statut HTTP, %2$d = la longueur de la réponse en octets -->
+    <plurals name="diagnostics_detail_http_ok">
+        <item quantity="one">HTTP %1$d, %2$d octet</item>
+        <item quantity="other">HTTP %1$d, %2$d octets</item>
+        <!--
+            The French locale of CLDR has a third category "many" for the round millions
+            (1 000 000, 1 000 000 000). The text is the same as "other" — the French
+            plural of "octet" does not change with the number.
+        -->
+        <item quantity="many">HTTP %1$d, %2$d octets</item>
+    </plurals>
+    <!-- %1$d = le statut HTTP -->
+    <string name="diagnostics_detail_http_failed">HTTP %1$d</string>
+    <!-- %1$d = la mémoire résidente du processus de l\'application en kilo-octets -->
+    <string name="diagnostics_detail_resident_memory">mémoire résidente %1$d kB</string>
+    <string name="diagnostics_copy_button">Copier dans le presse-papiers</string>
+    <string name="diagnostics_selftest_button">Lancer l\'auto-test</string>
+    <string name="diagnostics_running">Auto-test en cours…</string>
+    <!-- %1$d = le nombre de vérifications en échec, %2$d = le nombre de vérifications -->
+    <!-- %1$d = le nombre de contrôles échoués, %2$d = le nombre de contrôles -->
+    <plurals name="diagnostics_finished">
+        <item quantity="one">Auto-test terminé : %1$d contrôle en échec sur %2$d</item>
+        <item quantity="other">Auto-test terminé : %1$d contrôles en échec sur %2$d</item>
+        <!-- Categorie CLDR "many" du francais : meme texte que "other". -->
+        <item quantity="many">Auto-test terminé : %1$d contrôles en échec sur %2$d</item>
+    </plurals>
+    <string name="diagnostics_copied">Le rapport a été copié dans le presse-papiers</string>
+    <string name="diagnostics_copy_failed">Le presse-papiers n\'est pas disponible</string>
+    <string name="setting_diagnostics">Diagnostic</string>
+    <string name="setting_diagnostics_subtitle">Afficher l\'état du récepteur et lancer un auto-test local</string>
+    <string name="setting_privacy">Politique de confidentialité</string>
+    <string name="setting_privacy_subtitle">Ce que l\'application stocke et ce qu\'elle envoie</string>
+    <string name="privacy_policy_url">https://github.com/mazer666/PhairPlay/blob/main/PRIVACY.md</string>
+    <string name="privacy_policy_no_browser">Aucune application de cette TV ne peut ouvrir de page web. La politique de confidentialité est ici :\n\n%1$s</string>
+
+    <!-- Les valeurs mesurées du processus de l\'application face à leurs budgets -->
+    <string name="diagnostics_status_over_budget">au-dessus du budget</string>
+    <string name="diagnostics_section_resources">Ressources</string>
+    <string name="diagnostics_resource_memory">RAM</string>
+    <string name="diagnostics_resource_cpu">CPU</string>
+    <!-- %1$s = la taille mesurée, %2$s = le budget, %3$s = le résultat -->
+    <string name="diagnostics_resource_memory_value">%1$s / %2$s (%3$s)</string>
+    <!-- %1$s = la charge mesurée, %2$s = le budget, %3$s = le résultat -->
+    <string name="diagnostics_resource_cpu_value">%1$s %% / %2$s %% (%3$s)</string>
+    <string name="diagnostics_resources_button">Mesurer les ressources</string>
+    <string name="diagnostics_resources_measuring">Mesure des ressources…</string>
+    <string name="diagnostics_resources_measured">Ressources mesurées</string>
+
+</resources>

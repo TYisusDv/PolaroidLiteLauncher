@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml for PhairPlay.
+
+    Permission philosophy: request ONLY what is strictly necessary.
+    The full rationale for every line is in PRIVACY.md and in
+    docs/audit/2026-10-24-security-audit.md (section "Permission audit").
+
+    INTERNET                    — required for local TCP/UDP socket operations (AirPlay is LAN-only)
+    CHANGE_WIFI_MULTICAST_STATE — required to join mDNS multicast groups
+    ACCESS_WIFI_STATE           — required by Wi-Fi Direct (Miracast) and by the Cast SDK
+    ACCESS_NETWORK_STATE        — required to detect network changes (reconnect logic)
+    FOREGROUND_SERVICE          — required for persistent background receiver service (Android 9+)
+    FOREGROUND_SERVICE_CONNECTED_DEVICE — required for connectedDevice foreground service type (Android 14+)
+    CHANGE_WIFI_STATE           — required by WifiP2pManager for Miracast Wi-Fi Direct
+    NEARBY_WIFI_DEVICES         — required by WifiP2pManager on Android 13+ (API 33+)
+    ACCESS_FINE_LOCATION        — required by Wi-Fi Direct up to Android 12 (API 32)
+    ACCESS_COARSE_LOCATION      — mandatory companion of ACCESS_FINE_LOCATION on Android 12+
+    RECEIVE_BOOT_COMPLETED      — required for "start on boot" feature
+    SYSTEM_ALERT_WINDOW         — special access, needed to bring the app to the front on connect
+    POST_NOTIFICATIONS          — foreground service notification (Android 13+ runtime grant)
+
+    The device's IP address and MAC address are read with java.net.NetworkInterface, which
+    needs no permission at all — ACCESS_WIFI_STATE is NOT used for that.
+
+    Explicitly NOT requested:
+    - RECORD_AUDIO      (we receive audio, we do not record it)
+    - READ/WRITE storage (we don't persist stream data)
+    - CAMERA            (not needed)
+    - BLUETOOTH         (not needed)
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- Network permissions — local LAN only, no internet required -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Foreground service — keeps receiver alive when app is in background -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
+
+    <!--
+        Miracast (Wi-Fi Direct / Wi-Fi P2P).
+
+        The shape follows Google's Wi-Fi Direct documentation: on Android 13+ the platform
+        replaced the location permission with NEARBY_WIFI_DEVICES, so the location permissions
+        are capped at API 32 and are not declared on a current TV at all.
+
+        "neverForLocation" is a promise to the user and to the platform: PhairPlay uses Wi-Fi
+        Direct only to advertise and accept a mirroring session, it never derives a location
+        from a Wi-Fi result.
+    -->
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <!--
+        "neverForLocation" was introduced with API 31. On an older system the attribute is
+        simply ignored, so the declaration is marked with tools:targetApi. The tools
+        namespace is removed again when the manifest is merged, it never reaches the APK.
+    -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="31" />
+    <uses-permission
+        android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission
+        android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="32" />
+
+    <!-- Start on boot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Lets the service open MainActivity when a sender connects while the app is in the
+         background (Android 10+ blocks background activity starts otherwise). Only effective
+         once the user grants "Display over other apps"; without it the old behaviour remains. -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
+    <!-- Foreground service notification (Android 13+ requires runtime grant) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        Declare this app as a TV app (leanback).
+        Required for the app to appear in the TV launcher.
+        uses-feature android.hardware.touchscreen is set to NOT required
+        because TV remotes are used, not touch screens.
+    -->
+    <uses-feature
+        android:name="android.hardware.touchscreen"
+        android:required="false" />
+    <uses-feature
+        android:name="android.software.leanback"
+        android:required="true" />
+    <uses-feature
+        android:name="android.hardware.wifi"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.gps"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.location.network"
+        android:required="false" />
+
+    <!--
+        supportsRtl — the layouts mirror in a right-to-left locale: the navigation panel
+        sits at the start edge, the text is aligned to the start and the drawables follow
+        the reading direction. The layout audit found no hardcoded left/right geometry —
+        every margin and padding uses the logical Start/End variants.
+
+        localeConfig — the languages the app offers. Android 13+ (API 33) reads the file
+        and lets the user pick the app language in the system settings ("App languages").
+        Below API 33 the attribute is ignored and the device language decides, which is
+        the previous behaviour. The attribute needs API 33, so tools:targetApi tells the
+        lint that the attribute is intentional — the same trick the NEARBY_WIFI_DEVICES
+        permission uses above.
+    -->
+    <!--
+        allowBackup="false" switches the cloud backup off. On Android 12 (API 31) and
+        newer it does NOT switch the device-to-device transfer off — that one is
+        governed by the two rule files, so both are named here:
+
+        - dataExtractionRules → res/xml/data_extraction_rules.xml (Android 12+)
+        - fullBackupContent   → res/xml/backup_rules.xml        (Android 11 and older)
+
+        Both exclude every domain. The app holds the long-term Ed25519 identity of the
+        receiver and the public keys of the paired controllers; neither may leave the
+        device. See docs/security/FINDINGS.md (SEC-19).
+    -->
+    <application>
+
+        <!--
+            MainActivity is the single entry point for the app.
+            It hosts both the WaitingScreen and StreamingScreen,
+            and starts/stops the AirPlayReceiver.
+
+            - launchMode="singleTop": prevents duplicate instances when
+              the user launches the app again while it's running
+            - screenOrientation="landscape": TV apps are always landscape
+            - configChanges: handle orientation/screen size changes ourselves
+              to avoid destroying the RTSP session on a config change
+        -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:theme="@style/Theme.PhairPlay.Fullscreen">
+
+            <!-- Makes the app launchable from the TV home screen -->
+        </activity>
+
+        <!--
+            PhairPlayService — persistent foreground service that manages
+            AirPlay, Miracast, and Cast receivers.
+
+            - foregroundServiceType="connectedDevice": required for Android 14+
+              when a foreground service manages a connected device (BT/Wi-Fi/P2P)
+            - exported="false": only started from within this app via ServiceController
+            - START_STICKY: service restarts automatically if killed by the system
+        -->
+        <service
+            android:name=".service.PhairPlayService"
+            android:foregroundServiceType="connectedDevice"
+            android:exported="false" />
+
+        <!--
+            BootReceiver — listens for BOOT_COMPLETED and starts PhairPlayService
+            if the "Start on boot" setting is enabled.
+            exported="false" because it is only triggered by the system broadcast.
+        -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+    </application>
+
+</manifest>

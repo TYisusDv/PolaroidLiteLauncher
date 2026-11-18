@@ -1,18 +1,15 @@
 package tv.polaroid.litehome;
 
-import android.app.Activity;
-import android.Manifest;
 import android.content.ComponentName;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
-import android.provider.Settings;
 import android.view.Gravity;
 import android.view.View;
 import android.view.animation.DecelerateInterpolator;
@@ -25,11 +22,14 @@ import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 
 import tv.polaroid.litehome.data.apps.PackageManagerAppsRepository;
 import tv.polaroid.litehome.data.apps.InstalledApp;
 import tv.polaroid.litehome.data.apps.AppsRepository;
 import tv.polaroid.litehome.data.devices.AndroidTvInputRepository;
+import tv.polaroid.litehome.data.devices.CvteInputSourceController;
 import tv.polaroid.litehome.data.devices.TvDevice;
 import tv.polaroid.litehome.data.devices.DevicesRepository;
 
@@ -41,23 +41,33 @@ import java.util.Date;
 import java.util.List;
 
 /** Lightweight native home screen for Android 7 TVs and D-pad remotes. */
-public final class HomeActivity extends Activity {
+public final class HomeActivity extends FragmentActivity {
     private static volatile HomeActivity foregroundInstance;
     private static final int BG = Color.rgb(9, 12, 19);
     private static final int WHITE = Color.rgb(246, 248, 253);
     private static final int MUTED = Color.rgb(157, 165, 181);
     private static final int BLUE = Color.rgb(55, 143, 255);
+    private static final String APP_USAGE_PREFS = "app_usage";
+    private static final String RECENT_APPS_KEY = "recent_launch_order";
 
     private final ArrayList<InstalledApp> apps = new ArrayList<>();
+    private final ArrayList<String> recentAppPackages = new ArrayList<>();
     private AppsRepository appsRepository;
     private DevicesRepository devicesRepository;
     private LinearLayout root;
     private FrameLayout content;
     private TextView clock;
     private ImageButton globalControlButton;
+    private ImageButton phairPlayButton;
+    private TextView phairPlayReceiverTab;
+    private TextView phairPlaySettingsTab;
+    private FrameLayout phairPlayFragmentSlot;
     private PopupWindow remotePopup;
+    private ImageButton systemSettingsButton;
+    private PopupWindow systemSettingsPopup;
     private TextView[] tabs;
     private String selectedTab = "Inicio";
+    private String selectedPhairPlaySection = "Receptor";
     private LocalRemoteServer remoteServer;
 
     static void refreshRemoteServiceState() {
@@ -75,6 +85,14 @@ public final class HomeActivity extends Activity {
     static boolean dispatchRemoteKey(String action) {
         HomeActivity activity = foregroundInstance;
         return activity != null && activity.dispatchNativeRemoteKey(action);
+    }
+
+    static void openAppsPage(Context context) {
+        Intent intent = new Intent(context, HomeActivity.class);
+        intent.putExtra("open_tab", "Apps");
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP
+                | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        context.startActivity(intent);
     }
 
     private boolean dispatchNativeRemoteKey(String action) {
@@ -100,6 +118,7 @@ public final class HomeActivity extends Activity {
         getWindow().setNavigationBarColor(BG);
         appsRepository = new PackageManagerAppsRepository(this);
         devicesRepository = new AndroidTvInputRepository(this);
+        loadRecentAppOrder();
         remoteServer = new LocalRemoteServer(this, new LocalRemoteServer.ActionHandler() {
             @Override public void onAction(final String action) {
                 runOnUiThread(new Runnable() {
@@ -109,8 +128,14 @@ public final class HomeActivity extends Activity {
         });
         buildShell();
         loadApps();
-        showTab("Inicio", false);
+        showTab("Apps".equals(getIntent().getStringExtra("open_tab")) ? "Apps" : "Inicio", false);
         updateClock();
+    }
+
+    @Override protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        if ("Apps".equals(intent.getStringExtra("open_tab"))) showTab("Apps", true);
     }
 
     @Override protected void onResume() {
@@ -143,6 +168,18 @@ public final class HomeActivity extends Activity {
             dismissRemotePopup(true);
             return;
         }
+        if ("PhairPlay".equals(selectedTab)) {
+            if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                super.onBackPressed();
+                return;
+            }
+            if ("Ajustes".equals(selectedPhairPlaySection)) {
+                showPhairPlaySection("Receptor", true);
+            } else {
+                showTab("Inicio", true);
+            }
+            return;
+        }
         super.onBackPressed();
     }
 
@@ -171,7 +208,7 @@ public final class HomeActivity extends Activity {
         profileLp.leftMargin = dp(8);
         bar.addView(profile, profileLp);
         tabs = new TextView[3];
-        String[] labels = {"Inicio", "Apps", "Fuentes"};
+        String[] labels = {"Inicio", "Aplicaciones", "Fuentes"};
         for (int i = 0; i < labels.length; i++) {
             final String label = labels[i];
             TextView tab = text(label, 14, WHITE, Typeface.BOLD);
@@ -209,6 +246,36 @@ public final class HomeActivity extends Activity {
             @Override public void onClick(View view) { toggleRemotePopup(); }
         });
         bar.addView(globalControlButton, new LinearLayout.LayoutParams(dp(42), dp(42)));
+        phairPlayButton = new ImageButton(this);
+        phairPlayButton.setImageResource(R.drawable.ic_cast);
+        phairPlayButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        phairPlayButton.setPadding(dp(9), dp(9), dp(9), dp(9));
+        phairPlayButton.setContentDescription("PhairPlay");
+        phairPlayButton.setFocusable(true);
+        phairPlayButton.setClickable(true);
+        phairPlayButton.setBackground(roundSolid(Color.rgb(29, 39, 57), dp(18)));
+        addFocusMotion(phairPlayButton, 1f, 0, dp(20));
+        phairPlayButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { showTab("PhairPlay", true); }
+        });
+        LinearLayout.LayoutParams phairPlayLp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        phairPlayLp.leftMargin = dp(8);
+        bar.addView(phairPlayButton, phairPlayLp);
+        systemSettingsButton = new ImageButton(this);
+        systemSettingsButton.setImageResource(R.drawable.ic_system_settings);
+        systemSettingsButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        systemSettingsButton.setPadding(dp(9), dp(9), dp(9), dp(9));
+        systemSettingsButton.setContentDescription("Ajustes del sistema y accesibilidad");
+        systemSettingsButton.setFocusable(true);
+        systemSettingsButton.setClickable(true);
+        systemSettingsButton.setBackground(roundSolid(Color.rgb(29, 39, 57), dp(18)));
+        addFocusMotion(systemSettingsButton, 1f, 0, dp(20));
+        systemSettingsButton.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) { toggleSystemSettingsPopup(); }
+        });
+        LinearLayout.LayoutParams settingsLp = new LinearLayout.LayoutParams(dp(42), dp(42));
+        settingsLp.leftMargin = dp(8);
+        bar.addView(systemSettingsButton, settingsLp);
         clock = text("", 14, WHITE, Typeface.NORMAL);
         clock.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams clockLp = new LinearLayout.LayoutParams(dp(82), dp(40));
@@ -218,21 +285,132 @@ public final class HomeActivity extends Activity {
     }
 
     private void showTab(String tab, boolean animate) {
+        if ("Apps".equals(tab)) tab = "Aplicaciones";
+        if (!"PhairPlay".equals(tab)) removePhairPlayFragment();
         selectedTab = tab;
         for (int i = 0; i < tabs.length; i++) {
             boolean selected = tabs[i].getText().toString().equals(tab);
             styleTab(tabs[i], selected);
         }
-        View page = "Apps".equals(tab) ? buildAppsPage()
-                : "Fuentes".equals(tab) ? buildSourcesPage() : buildHomePage();
+        View page = "Aplicaciones".equals(tab) ? buildAppsPage()
+                : "Fuentes".equals(tab) ? buildSourcesPage()
+                : "PhairPlay".equals(tab) ? buildPhairPlayPage() : buildHomePage();
         content.removeAllViews();
         content.addView(page, new FrameLayout.LayoutParams(-1, -1));
+        phairPlayButton.setBackground(roundSolid("PhairPlay".equals(tab)
+                ? Color.rgb(45, 71, 108) : Color.rgb(29, 39, 57), dp(18)));
         if (animate) {
             page.setAlpha(0f);
             page.setTranslationY(dp(8));
             page.animate().alpha(1f).translationY(0).setDuration(220)
                     .setInterpolator(new DecelerateInterpolator()).start();
         }
+    }
+
+    /** PhairPlay receiver and settings stay inside Lite Home's content area. */
+    private View buildPhairPlayPage() {
+        com.phairplay.service.ServiceController.INSTANCE.start(this);
+        LinearLayout page = new LinearLayout(this);
+        page.setOrientation(LinearLayout.HORIZONTAL);
+        page.setPadding(0, dp(14), 0, dp(18));
+
+        LinearLayout aside = column();
+        aside.setPadding(0, dp(4), dp(18), 0);
+
+        TextView phairPlayTitle = text("PhairPlay", 20, WHITE, Typeface.BOLD);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(-1, -2);
+        titleLp.bottomMargin = dp(22);
+        aside.addView(phairPlayTitle, titleLp);
+
+        phairPlayReceiverTab = phairPlaySectionTab("Receptor");
+        phairPlaySettingsTab = phairPlaySectionTab("Ajustes");
+        aside.addView(phairPlayReceiverTab, new LinearLayout.LayoutParams(-1, dp(50)));
+        LinearLayout.LayoutParams settingsLp = new LinearLayout.LayoutParams(-1, dp(50));
+        settingsLp.topMargin = dp(8);
+        aside.addView(phairPlaySettingsTab, settingsLp);
+        LinearLayout.LayoutParams asideLp = new LinearLayout.LayoutParams(dp(218), -1);
+        page.addView(aside, asideLp);
+
+        View divider = new View(this);
+        divider.setBackgroundColor(Color.rgb(37, 47, 65));
+        page.addView(divider, new LinearLayout.LayoutParams(dp(1), -1));
+
+        phairPlayFragmentSlot = new FrameLayout(this);
+        phairPlayFragmentSlot.setId(com.phairplay.R.id.phairplay_content_container);
+        LinearLayout.LayoutParams slotLp = new LinearLayout.LayoutParams(0, -1, 1f);
+        slotLp.leftMargin = dp(24);
+        page.addView(phairPlayFragmentSlot, slotLp);
+        phairPlayReceiverTab.setOnClickListener(v -> showPhairPlaySection("Receptor", true));
+        phairPlaySettingsTab.setOnClickListener(v -> showPhairPlaySection("Ajustes", true));
+        stylePhairPlaySectionTabs();
+        phairPlayFragmentSlot.post(() -> {
+            showPhairPlaySection(selectedPhairPlaySection, false);
+            phairPlayReceiverTab.requestFocus();
+        });
+        return page;
+    }
+
+    private TextView phairPlaySectionTab(String label) {
+        TextView tab = text(label, 14, WHITE, Typeface.BOLD);
+        tab.setGravity(Gravity.CENTER_VERTICAL);
+        tab.setPadding(dp(16), 0, dp(14), 0);
+        tab.setFocusable(true);
+        tab.setClickable(true);
+        tab.setBackground(roundSolid(Color.rgb(20, 27, 40), dp(13)));
+        addFocusMotion(tab, 1f, 0, dp(13));
+        return tab;
+    }
+
+    private void stylePhairPlaySectionTabs() {
+        stylePhairPlayAsideItem(phairPlayReceiverTab,
+                "Receptor".equals(selectedPhairPlaySection));
+        stylePhairPlayAsideItem(phairPlaySettingsTab,
+                "Ajustes".equals(selectedPhairPlaySection));
+    }
+
+    private void stylePhairPlayAsideItem(TextView item, boolean selected) {
+        if (item == null) return;
+        item.setTextColor(selected ? Color.rgb(13, 17, 26) : WHITE);
+        item.setBackground(roundSolid(selected ? Color.rgb(239, 243, 251)
+                : Color.rgb(20, 27, 40), dp(13)));
+    }
+
+    private void showPhairPlaySection(String section, boolean animate) {
+        if (!"PhairPlay".equals(selectedTab)) return;
+        selectedPhairPlaySection = section;
+        stylePhairPlaySectionTabs();
+        Runnable swap = () -> {
+            Fragment fragment = "Ajustes".equals(section)
+                    ? new com.phairplay.ui.SettingsFragment() : new com.phairplay.ui.HomeFragment();
+            getSupportFragmentManager().beginTransaction()
+                    .replace(com.phairplay.R.id.phairplay_content_container, fragment)
+                    .commitNowAllowingStateLoss();
+            if (animate && phairPlayFragmentSlot != null) {
+                phairPlayFragmentSlot.setAlpha(0f);
+                phairPlayFragmentSlot.setTranslationX(-dp(12));
+                phairPlayFragmentSlot.animate().alpha(1f).translationX(0f)
+                        .setDuration(190).setInterpolator(new DecelerateInterpolator()).start();
+            }
+        };
+        if (animate && phairPlayFragmentSlot != null) {
+            phairPlayFragmentSlot.animate().alpha(0f).translationX(dp(12))
+                    .setDuration(100).setInterpolator(new DecelerateInterpolator())
+                    .withEndAction(swap).start();
+        } else {
+            swap.run();
+        }
+    }
+
+    private void removePhairPlayFragment() {
+        getSupportFragmentManager().executePendingTransactions();
+        Fragment fragment = getSupportFragmentManager()
+                .findFragmentById(com.phairplay.R.id.phairplay_content_container);
+        if (fragment != null) {
+            getSupportFragmentManager().beginTransaction().remove(fragment).commitNowAllowingStateLoss();
+        }
+        phairPlayReceiverTab = null;
+        phairPlaySettingsTab = null;
+        phairPlayFragmentSlot = null;
     }
 
     private void styleTab(TextView view, boolean selected) {
@@ -256,7 +434,7 @@ public final class HomeActivity extends Activity {
         page.addView(buildAppShelf(), new LinearLayout.LayoutParams(-1, dp(92)));
         page.addView(sectionTitle("Continúa viendo", "Tu actividad reciente aparecerá aquí"));
         page.addView(buildEmptyWatching(), new LinearLayout.LayoutParams(-1, dp(96)));
-        page.addView(sectionTitle("Fuentes", "HDMI, AV y televisión"));
+        page.addView(sectionTitle("Fuentes", "HDMI, VGA, YPbPr, AV y televisión"));
         page.addView(buildSourceShelf(), new LinearLayout.LayoutParams(-1, dp(92)));
         scroll.addView(page);
         return scroll;
@@ -330,8 +508,11 @@ public final class HomeActivity extends Activity {
         for (InstalledApp app : apps) if (!isCuratedSystemApp(app)) homeApps.add(app);
         Collections.sort(homeApps, new Comparator<InstalledApp>() {
             @Override public int compare(InstalledApp a, InstalledApp b) {
-                int rank = homeAppRank(a) - homeAppRank(b);
-                return rank != 0 ? rank : a.label.compareToIgnoreCase(b.label);
+                int aRank = recentAppPackages.indexOf(a.packageName);
+                int bRank = recentAppPackages.indexOf(b.packageName);
+                if (aRank < 0) aRank = Integer.MAX_VALUE;
+                if (bRank < 0) bRank = Integer.MAX_VALUE;
+                return aRank != bRank ? aRank - bRank : a.label.compareToIgnoreCase(b.label);
             }
         });
         return buildAppShelf(homeApps, dp(160), dp(88));
@@ -400,10 +581,14 @@ public final class HomeActivity extends Activity {
         for (InstalledApp app : apps) {
             (isCuratedSystemApp(app) ? systemApps : personalApps).add(app);
         }
+        Collections.sort(personalApps, new Comparator<InstalledApp>() {
+            @Override public int compare(InstalledApp a, InstalledApp b) {
+                return a.label.compareToIgnoreCase(b.label);
+            }
+        });
         Collections.sort(systemApps, new Comparator<InstalledApp>() {
             @Override public int compare(InstalledApp a, InstalledApp b) {
-                int rank = systemAppRank(a) - systemAppRank(b);
-                return rank != 0 ? rank : a.label.compareToIgnoreCase(b.label);
+                return a.label.compareToIgnoreCase(b.label);
             }
         });
         if (!personalApps.isEmpty()) {
@@ -465,9 +650,12 @@ public final class HomeActivity extends Activity {
             String id = discoveredInput == null ? "source/HW" + hardwareId : discoveredInput.id;
             sources.add(new TvDevice(id, "HDMI " + port, "HDMI", true));
         }
+        // Hardware IDs 2 and 3 are component and VGA, respectively, on this CVTE board.
+        sources.add(new TvDevice("source/HW3", "VGA", "PC", true));
+        sources.add(new TvDevice("source/HW1", "TV", "Antena", true));
         // CVTE/MTK firmware uses hardware source IDs 0 and 1 for AV and TV.
         sources.add(new TvDevice("source/HW0", "AV", "AV", true));
-        sources.add(new TvDevice("source/HW1", "TV", "Antena", true));
+        sources.add(new TvDevice("source/HW2", "YPbPr", "Componente", true));
         return sources;
     }
 
@@ -487,6 +675,8 @@ public final class HomeActivity extends Activity {
     private int sourceIconResource(String sourceLabel) {
         String label = normalizedAppLabel(sourceLabel);
         if (label.startsWith("hdmi")) return R.drawable.ic_source_hdmi;
+        if ("vga".equals(label)) return R.drawable.ic_source_vga;
+        if ("ypbpr".equals(label) || "componente".equals(label)) return R.drawable.ic_source_component;
         if ("av".equals(label)) return R.drawable.ic_source_av;
         return R.drawable.ic_source_tv;
     }
@@ -549,17 +739,26 @@ public final class HomeActivity extends Activity {
     }
 
     private void openDevice(TvDevice device) {
-        try {
-            int hardwareInputId = inputHardwareId(device.id);
-            Intent intent = new Intent("android.intent.action.CVT_IN_TV");
-            intent.setComponent(new ComponentName("com.cvte.tv.androidsetting",
-                    "com.cvte.tv.androidsetting.TvSettingActivity"));
-            intent.putExtra("MTK_EXTRA_INPUT_ID", hardwareInputId);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-            startActivity(intent);
-        } catch (Exception error) {
-            Toast.makeText(this, "No se pudo abrir " + device.label, Toast.LENGTH_SHORT).show();
-        }
+        final String sourceLabel = device.label;
+        CvteInputSourceController.select(this, sourceLabel, inputHardwareId(device.id),
+                new CvteInputSourceController.Callback() {
+                    @Override public void onResult(boolean selected) {
+                        if (!selected) {
+                            Toast.makeText(HomeActivity.this, "No se pudo cambiar a " + sourceLabel,
+                                    Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        Intent tvHome = new Intent(Intent.ACTION_MAIN);
+                        tvHome.addCategory("android.intent.category.TV_HOME");
+                        tvHome.putExtra("isLauncherGoToTv", true);
+                        tvHome.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        try { startActivity(tvHome); }
+                        catch (Exception error) {
+                            Toast.makeText(HomeActivity.this, "Entrada cambiada a " + sourceLabel,
+                                    Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 
     private int inputHardwareId(String id) {
@@ -615,28 +814,14 @@ public final class HomeActivity extends Activity {
         return card;
     }
 
-    private int homeAppRank(InstalledApp app) {
-        String label = normalizedAppLabel(app.label);
-        if ("netflix".equals(label)) return 0;
-        if ("descargas".equals(label) || "downloads".equals(label)) return 1;
-        if ("multimedia".equals(label) || "media player".equals(label)) return 2;
-        return 3;
-    }
-
     private boolean isCuratedSystemApp(InstalledApp app) {
         String label = normalizedAppLabel(app.label);
         return "com.android.providers.downloads.ui".equals(app.packageName)
                 || "com.cvte.tv.media".equals(app.packageName)
+                || "com.cvte.tv.androidsetting".equals(app.packageName)
                 || "descargas".equals(label) || "downloads".equals(label)
+                || "ajustes".equals(label)
                 || "multimedia".equals(label) || "tv master".equals(label);
-    }
-
-    private int systemAppRank(InstalledApp app) {
-        String label = normalizedAppLabel(app.label);
-        if ("descargas".equals(label) || "downloads".equals(label)) return 0;
-        if ("multimedia".equals(label) || "media player".equals(label)) return 1;
-        if ("tv master".equals(label)) return 2;
-        return 3;
     }
 
     private String normalizedAppLabel(String label) {
@@ -680,8 +865,36 @@ public final class HomeActivity extends Activity {
         showTab(selectedTab, false);
     }
 
+    private void loadRecentAppOrder() {
+        String stored = getSharedPreferences(APP_USAGE_PREFS, MODE_PRIVATE)
+                .getString(RECENT_APPS_KEY, "");
+        recentAppPackages.clear();
+        if (stored.length() == 0) return;
+        for (String packageName : stored.split("\\|")) {
+            if (packageName.length() > 0 && !recentAppPackages.contains(packageName)) {
+                recentAppPackages.add(packageName);
+            }
+        }
+    }
+
+    private void recordAppLaunch(InstalledApp app) {
+        recentAppPackages.remove(app.packageName);
+        recentAppPackages.add(0, app.packageName);
+        while (recentAppPackages.size() > 30) recentAppPackages.remove(recentAppPackages.size() - 1);
+        StringBuilder value = new StringBuilder();
+        for (String packageName : recentAppPackages) {
+            if (value.length() > 0) value.append('|');
+            value.append(packageName);
+        }
+        getSharedPreferences(APP_USAGE_PREFS, MODE_PRIVATE).edit()
+                .putString(RECENT_APPS_KEY, value.toString()).apply();
+    }
+
     private void launchApp(InstalledApp app) {
-        try { startActivity(app.launchIntent); }
+        try {
+            startActivity(app.launchIntent);
+            recordAppLaunch(app);
+        }
         catch (Exception ignored) { loadApps(); }
     }
 
@@ -694,8 +907,6 @@ public final class HomeActivity extends Activity {
         globalControlButton.setContentDescription(RemoteAccessibilityService.isActive(this)
                 ? "Control remoto; control global activo"
                 : "Control remoto; control global inactivo");
-        globalControlButton.setBackground(roundSolid(RemoteAccessibilityService.isActive(this)
-                ? Color.rgb(28, 85, 69) : Color.rgb(29, 39, 57), dp(18)));
         if (remotePopup != null && remotePopup.isShowing()) {
             dismissRemotePopup(false);
             showRemotePopup();
@@ -705,6 +916,102 @@ public final class HomeActivity extends Activity {
     private void toggleRemotePopup() {
         if (remotePopup != null && remotePopup.isShowing()) dismissRemotePopup(true);
         else showRemotePopup();
+    }
+
+    private void toggleSystemSettingsPopup() {
+        if (systemSettingsPopup != null && systemSettingsPopup.isShowing()) {
+            systemSettingsPopup.dismiss();
+            systemSettingsPopup = null;
+        } else {
+            showSystemSettingsPopup();
+        }
+    }
+
+    private void showSystemSettingsPopup() {
+        if (systemSettingsButton == null || isFinishing()) return;
+        LinearLayout panel = column();
+        panel.setPadding(dp(16), dp(14), dp(16), dp(14));
+        panel.setBackground(roundStroke(Color.rgb(20, 25, 36), Color.rgb(58, 68, 87), dp(18)));
+        panel.setElevation(dp(16));
+        TextView heading = text("Ajustes del sistema", 17, WHITE, Typeface.BOLD);
+        panel.addView(heading, bottomMargin(dp(10)));
+
+        View tvSettings = settingsAction("Ajustes del televisor", "Red, imagen y opciones del equipo",
+                R.drawable.ic_system_settings);
+        tvSettings.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                dismissSystemSettingsPopup();
+                openTelevisionSettings();
+            }
+        });
+        panel.addView(tvSettings, bottomMargin(dp(8)));
+
+        View accessibility = settingsAction("Accesibilidad", "Abrir los ajustes del televisor",
+                R.drawable.ic_accessibility);
+        accessibility.setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View view) {
+                dismissSystemSettingsPopup();
+                openTelevisionSettings();
+            }
+        });
+        panel.addView(accessibility);
+
+        systemSettingsPopup = new PopupWindow(panel, Math.min(dp(350),
+                getResources().getDisplayMetrics().widthPixels - dp(28)), -2, true);
+        systemSettingsPopup.setBackgroundDrawable(roundSolid(Color.TRANSPARENT, dp(18)));
+        systemSettingsPopup.setOutsideTouchable(true);
+        systemSettingsPopup.setElevation(dp(18));
+        systemSettingsPopup.setOnDismissListener(new PopupWindow.OnDismissListener() {
+            @Override public void onDismiss() { systemSettingsPopup = null; }
+        });
+        systemSettingsPopup.showAsDropDown(systemSettingsButton, -dp(8), dp(8), Gravity.RIGHT);
+        panel.setAlpha(0f);
+        panel.setScaleX(.94f);
+        panel.setScaleY(.94f);
+        panel.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(170)
+                .setInterpolator(new DecelerateInterpolator()).start();
+        tvSettings.requestFocus();
+    }
+
+    private View settingsAction(String title, String description, int iconResource) {
+        LinearLayout row = new LinearLayout(this);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(8), dp(12), dp(8));
+        row.setFocusable(true);
+        row.setClickable(true);
+        row.setBackground(roundStroke(Color.rgb(38, 44, 56), Color.rgb(50, 58, 72), dp(13)));
+        addFocusMotion(row, 1f, 0, dp(13));
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(iconResource);
+        icon.setPadding(dp(4), dp(4), dp(4), dp(4));
+        row.addView(icon, new LinearLayout.LayoutParams(dp(34), dp(34)));
+        LinearLayout labels = column();
+        LinearLayout.LayoutParams labelsLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        labelsLp.leftMargin = dp(10);
+        labels.addView(text(title, 14, WHITE, Typeface.BOLD));
+        labels.addView(text(description, 10, MUTED, Typeface.NORMAL), topMargin(dp(2)));
+        row.addView(labels, labelsLp);
+        TextView arrow = text("›", 22, MUTED, Typeface.NORMAL);
+        row.addView(arrow);
+        return row;
+    }
+
+    private void openTelevisionSettings() {
+        Intent intent = new Intent("android.settings.SETTINGS");
+        intent.setComponent(new ComponentName("com.cvte.tv.androidsetting",
+                "com.cvte.tv.androidsetting.GlobalSettingActivity"));
+        try {
+            startActivity(intent);
+        } catch (Exception e) {
+            Toast.makeText(this, "No se pudieron abrir los ajustes del televisor", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void dismissSystemSettingsPopup() {
+        if (systemSettingsPopup != null) {
+            systemSettingsPopup.dismiss();
+            systemSettingsPopup = null;
+        }
     }
 
     private void showRemotePopup() {
@@ -751,41 +1058,19 @@ public final class HomeActivity extends Activity {
         controlLabels.addView(status, topMargin(dp(3)));
         control.addView(controlLabels, new LinearLayout.LayoutParams(0, -2, 1f));
         Switch globalSwitch = new Switch(this);
-        globalSwitch.setChecked(RemoteAccessibilityService.isActive(this));
-        globalSwitch.setContentDescription("Activar o desactivar control global");
-        final boolean[] updatingSwitch = {false};
-        globalSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override public void onCheckedChanged(final CompoundButton button, final boolean checked) {
-                if (updatingSwitch[0]) return;
-                if (!setRemoteAccessibilityEnabled(checked)) {
-                    updatingSwitch[0] = true;
-                    button.setChecked(RemoteAccessibilityService.isActive(HomeActivity.this));
-                    updatingSwitch[0] = false;
-                    Toast.makeText(HomeActivity.this,
-                            "Falta autorizar el permiso ADB indicado en el README", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                button.setEnabled(false);
-                Toast.makeText(HomeActivity.this, checked ? "Activando control global…"
-                        : "Desactivando control global…", Toast.LENGTH_SHORT).show();
-                new android.os.Handler().postDelayed(new Runnable() {
-                    @Override public void run() {
-                        boolean active = RemoteAccessibilityService.isActive(HomeActivity.this);
-                        updatingSwitch[0] = true;
-                        button.setChecked(active);
-                        updatingSwitch[0] = false;
-                        button.setEnabled(true);
-                        if (active != checked) {
-                            Toast.makeText(HomeActivity.this, "Android no pudo cambiar el servicio", Toast.LENGTH_LONG).show();
-                        }
-                        updateRemoteHint();
-                    }
-                }, 1200);
-            }
-        });
+        boolean globalControlActive = RemoteAccessibilityService.isActive(this);
+        globalSwitch.setChecked(globalControlActive);
+        globalSwitch.setContentDescription(globalControlActive
+                ? "Control global activo" : "Control global inactivo");
+        globalSwitch.setThumbTintList(ColorStateList.valueOf(WHITE));
+        globalSwitch.setTrackTintList(ColorStateList.valueOf(globalControlActive
+                ? BLUE : Color.rgb(73, 81, 96)));
+        globalSwitch.setEnabled(false);
+        globalSwitch.setClickable(false);
+        globalSwitch.setFocusable(false);
+        globalSwitch.setAlpha(1f);
         control.addView(globalSwitch);
         LinearLayout.LayoutParams controlLp = new LinearLayout.LayoutParams(-1, dp(54));
-        controlLp.topMargin = dp(10);
         panel.addView(control, controlLp);
 
         LinearLayout restart = new LinearLayout(this);
@@ -826,8 +1111,8 @@ public final class HomeActivity extends Activity {
                 }, "polaroid-server-restart").start();
             }
         });
-        LinearLayout.LayoutParams restartLp = new LinearLayout.LayoutParams(-1, dp(48));
-        restartLp.topMargin = dp(12);
+        LinearLayout.LayoutParams restartLp = new LinearLayout.LayoutParams(-1, dp(42));
+        restartLp.topMargin = dp(7);
         panel.addView(restart, restartLp);
 
         remotePopup = new PopupWindow(panel, Math.min(dp(380), getResources().getDisplayMetrics().widthPixels - dp(28)),
@@ -902,30 +1187,6 @@ public final class HomeActivity extends Activity {
                 }).start();
     }
 
-    private boolean setRemoteAccessibilityEnabled(boolean enabled) {
-        if (checkSelfPermission(Manifest.permission.WRITE_SECURE_SETTINGS)
-                != PackageManager.PERMISSION_GRANTED) return false;
-        String current = Settings.Secure.getString(getContentResolver(),
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
-        ArrayList<String> services = new ArrayList<>();
-        ComponentName target = new ComponentName(this, RemoteAccessibilityService.class);
-        if (current != null && current.length() > 0) {
-            for (String entry : current.split(":")) {
-                String trimmed = entry.trim();
-                if (trimmed.length() == 0) continue;
-                ComponentName component = ComponentName.unflattenFromString(trimmed);
-                if (target.equals(component)) continue;
-                services.add(trimmed);
-            }
-        }
-        if (enabled) services.add(target.flattenToString());
-        boolean servicesWritten = Settings.Secure.putString(getContentResolver(),
-                Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, android.text.TextUtils.join(":", services));
-        boolean accessibilityWritten = Settings.Secure.putInt(getContentResolver(),
-                Settings.Secure.ACCESSIBILITY_ENABLED, services.isEmpty() ? 0 : 1);
-        return servicesWritten && accessibilityWritten;
-    }
-
     private void requestGlobalControlFocus() {
         if (globalControlButton == null) return;
         globalControlButton.post(new Runnable() {
@@ -946,6 +1207,27 @@ public final class HomeActivity extends Activity {
 
     private void dispatchLocalAction(String action) {
         if (RemoteMediaActions.dispatch(this, action)) return;
+        if ("apps".equals(action)) {
+            showTab("Apps", true);
+            return;
+        }
+        if ("voice".equals(action)) {
+            try {
+                Intent voice = new Intent("android.intent.action.VOICE_COMMAND");
+                voice.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(voice);
+            } catch (Exception ignored) { }
+            return;
+        }
+        if ("power".equals(action)) {
+            try {
+                Intent shutdown = new Intent("android.intent.action.ACTION_REQUEST_SHUTDOWN");
+                shutdown.putExtra("android.intent.extra.KEY_CONFIRM", true);
+                shutdown.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(shutdown);
+            } catch (Exception ignored) { }
+            return;
+        }
         if ("home".equals(action)) {
             Intent home = new Intent(Intent.ACTION_MAIN);
             home.addCategory(Intent.CATEGORY_HOME);
@@ -974,6 +1256,12 @@ public final class HomeActivity extends Activity {
     private LinearLayout.LayoutParams topMargin(int size) {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
         lp.topMargin = size;
+        return lp;
+    }
+
+    private LinearLayout.LayoutParams bottomMargin(int size) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = size;
         return lp;
     }
 

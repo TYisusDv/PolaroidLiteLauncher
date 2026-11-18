@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ─── Backgrounds ─────────────────────────────────────── -->
+    <!-- True black — best for OLED, minimal visual noise on TV -->
+    <color name="background_dark">#FF090C13</color>
+    <!-- Surface elevation: cards, sheets, nav panel -->
+    <color name="background_surface">#FF1D2739</color>
+    <!-- Slightly lighter surface for hover/pressed states -->
+    <color name="background_surface_elevated">#FF29364B</color>
+    <!-- Dividers and separators -->
+    <color name="divider">#FF344054</color>
+
+    <!-- ─── Text ─────────────────────────────────────────────── -->
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#FF9DA5B5</color>
+    <color name="text_tertiary">#FF78849A</color>
+    <color name="setting_label">#FFE1E7F2</color>
+    <color name="text_on_accent">#FFFFFFFF</color>
+
+    <!-- ─── Accent (Google TV blue) ─────────────────────────── -->
+    <color name="accent_blue">#FF378FFF</color>
+    <color name="accent_blue_pressed">#FF246FCB</color>
+    <color name="focus_ring">#FF70B2FF</color>
+
+    <!-- ─── Protocol status colors ──────────────────────────── -->
+    <!-- Green: service running / connected -->
+    <color name="status_running">#FF34C759</color>
+    <!-- Red: service stopped / error -->
+    <color name="status_stopped">#FFFF3B30</color>
+    <!-- Gray: service disabled by user -->
+    <color name="status_disabled">#FF636366</color>
+    <!-- Yellow: service starting / restarting -->
+    <color name="status_transitioning">#FFFFD60A</color>
+
+    <!-- ─── Protocol brand colors ────────────────────────────── -->
+    <!-- AirPlay: Apple silver-blue -->
+    <color name="protocol_airplay">#FF5AC8FA</color>
+    <!-- Miracast: neutral teal -->
+    <color name="protocol_miracast">#FF30D158</color>
+    <!-- Cast: Google blue -->
+    <color name="protocol_cast">#FF4285F4</color>
+
+    <!-- ─── Navigation ────────────────────────────────────────── -->
+    <color name="nav_panel_background">#FF090C13</color>
+    <color name="nav_item_selected">#FF378FFF</color>
+    <color name="nav_item_normal">#FF9DA5B5</color>
+</resources>

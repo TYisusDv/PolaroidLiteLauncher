@@ -33,9 +33,10 @@ final class LocalRemoteServer {
     private static final Charset UTF8 = Charset.forName("UTF-8");
     private static final String PAIRING_PREFS = "remote_pairing";
     private static final String SESSION_TOKEN_KEY = "session_token";
-    private final String pin;
+    private volatile String pin;
     private final ActionHandler actionHandler;
     private final SharedPreferences pairingPreferences;
+    private final Context context;
     private volatile boolean running;
     private volatile Thread serverThread;
     private volatile String sessionToken = "";
@@ -44,6 +45,7 @@ final class LocalRemoteServer {
     private int badPins;
 
     LocalRemoteServer(Context context, ActionHandler actionHandler) {
+        this.context = context.getApplicationContext();
         this.actionHandler = actionHandler;
         pairingPreferences = context.getSharedPreferences(PAIRING_PREFS, Context.MODE_PRIVATE);
         sessionToken = pairingPreferences.getString(SESSION_TOKEN_KEY, "");
@@ -51,6 +53,16 @@ final class LocalRemoteServer {
     }
 
     String getPin() { return pin; }
+
+    private String loadRemotePage() throws IOException {
+        try (InputStream input = context.getAssets().open("remote_page.html")) {
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            byte[] buffer = new byte[4096];
+            int read;
+            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
+            return new String(output.toByteArray(), UTF8);
+        }
+    }
 
     static String getLocalIpv4() {
         try {
@@ -177,7 +189,7 @@ final class LocalRemoteServer {
         OutputStream output = client.getOutputStream();
 
         if ("GET".equals(method) && ("/".equals(path) || "/index.html".equals(path))) {
-            respond(output, 200, "text/html; charset=utf-8", REMOTE_PAGE);
+            respond(output, 200, "text/html; charset=utf-8", loadRemotePage());
         } else if ("POST".equals(method) && "/pair".equals(path)) {
             pair(output, body);
         } else if ("POST".equals(method) && "/resume".equals(path)) {
@@ -208,6 +220,8 @@ final class LocalRemoteServer {
             sessionToken = existingToken;
             respond(output, 200, "application/json; charset=utf-8",
                     "{\"token\":\"" + sessionToken + "\"}");
+            pin = makePin();
+            HomeActivity.refreshRemoteServiceState();
         } else {
             badPins++;
             if (badPins >= 5) {
@@ -252,7 +266,16 @@ final class LocalRemoteServer {
             respond(output, 400, "application/json; charset=utf-8", "{\"error\":\"key\"}");
             return;
         }
-        actionHandler.onAction(key);
+        if ("text".equals(key)) {
+            String value = formValue(body, "text");
+            if (value == null || value.length() == 0 || value.length() > 400) {
+                respond(output, 400, "application/json; charset=utf-8", "{\"error\":\"text\"}");
+                return;
+            }
+            actionHandler.onAction("text:" + value);
+        } else {
+            actionHandler.onAction(key);
+        }
         respond(output, 200, "application/json; charset=utf-8", "{\"ok\":true}");
     }
 
@@ -263,7 +286,9 @@ final class LocalRemoteServer {
                 || "home".equals(action) || "volume_up".equals(action)
                 || "volume_down".equals(action) || "mute".equals(action)
                 || "previous".equals(action) || "next".equals(action)
-                || "play_pause".equals(action);
+                || "play_pause".equals(action) || "apps".equals(action)
+                || "voice".equals(action) || "power".equals(action)
+                || "text".equals(action);
     }
 
     private String formValue(String body, String name) {
@@ -324,15 +349,5 @@ final class LocalRemoteServer {
         return String.valueOf(100000 + random.nextInt(900000));
     }
 
-    private static final String REMOTE_PAGE = "<!doctype html><html lang='es'><head>"
-            + "<meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no'>"
-            + "<meta name='theme-color' content='#090c13'><title>Polaroid · Control remoto</title>"
-            + "<style>"
-            + "*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -10%,#202b42 0,#0d1119 44%,#090c13 100%);color:#f5f7fb;font:16px -apple-system,BlinkMacSystemFont,sans-serif;display:flex;justify-content:center;align-items:center;padding:20px}"
-            + ".shell{width:min(100%,390px)}.card{background:rgba(16,21,31,.94);border:1px solid rgba(211,222,244,.09);border-radius:30px;padding:23px 20px;box-shadow:0 24px 70px #0008}.brand{font-size:11px;font-weight:800;letter-spacing:.15em;color:#9caac0;margin:0 0 12px 5px}h1{font-size:24px;line-height:1.1;margin:0 0 7px}.sub{color:#9ba7ba;font-size:13px;margin:0 0 19px;line-height:1.45}"
-            + ".pinrow{display:flex;gap:9px}input{min-width:0;flex:1;border:1px solid #303a4d;border-radius:14px;background:#0c111a;color:#fff;padding:14px;font-size:20px;letter-spacing:.22em;text-align:center;outline:none}button{font:inherit;color:#f8f9fc;border:0;touch-action:manipulation;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .12s,background .12s}button:active{transform:scale(.94)}.pair{background:#e9edf5;color:#111722;border-radius:14px;padding:0 17px;font-weight:750}.msg{min-height:19px;margin:10px 2px 0;color:#ffb6ba;font-size:12px}.remote{display:none}.remote.show{display:block}.pairbox.hide{display:none}.head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}.status{font-size:13px;color:#a8b3c4;margin:6px 0 0}.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#26c276;margin-right:7px}.power{width:54px;height:54px;border-radius:50%;background:#b8322b;font-size:24px}.tools{display:flex;gap:10px;margin-bottom:17px}.tool{flex:1;height:56px;border-radius:50px;background:#191f2b;font-size:24px}.pad{width:min(76vw,282px);height:min(76vw,282px);max-width:282px;max-height:282px;margin:0 auto 18px;border-radius:50%;position:relative;background:linear-gradient(145deg,#1e2533,#141a25);border:1px solid #343c4b;box-shadow:inset 0 1px 0 #ffffff0d,0 16px 32px #0005}.key{position:absolute;width:68px;height:62px;border-radius:19px;background:transparent;font-size:30px;font-weight:500}.key:active{background:#303a4d}.up{left:calc(50% - 34px);top:9px}.down{left:calc(50% - 34px);bottom:9px}.left{left:9px;top:calc(50% - 31px)}.right{right:9px;top:calc(50% - 31px)}.ok{left:calc(50% - 40px);top:calc(50% - 38px);width:80px;height:76px;border-radius:50%;background:#111721;font-size:16px;font-weight:700}.bar{display:flex;border-radius:50px;background:#191f2b;overflow:hidden;margin:0 0 11px}.bar button{flex:1;height:54px;background:transparent;font-size:20px}.bar button:active,.tool:active{background:#303a4d}.tip{text-align:center;color:#7f8ba0;font-size:11px;margin:13px 0 0}.reconnect{display:block;margin:14px auto 0;background:transparent;color:#8894a9;font-size:12px;text-decoration:underline}"
-            + "</style></head><body><main class='shell'><p class='brand'>POLAROID · LITE HOME</p><section class='card'>"
-            + "<div class='pairbox' id='pairbox'><h1>Conecta tu control</h1><p class='sub'>Escribe el PIN que aparece en la pantalla de tu tele. La sesión se conserva aunque la página se reinicie o cambie el PIN.</p><div class='pinrow'><input id='pin' inputmode='numeric' maxlength='6' autocomplete='one-time-code' placeholder='••••••'><button class='pair' id='pair'>Conectar</button></div><p class='msg' id='msg'></p></div>"
-            + "<div class='remote' id='remote'><div class='head'><div><h1>Control remoto</h1><p class='status'><span class='dot'></span>Conectado a Polaroid</p></div></div><div class='tools'><button class='tool' data-key='back' aria-label='Atrás'>← Atrás</button><button class='tool' data-key='home' aria-label='Inicio'>⌂ Inicio</button></div><div class='pad'><button class='key up' data-key='up' aria-label='Arriba'>⌃</button><button class='key left' data-key='left' aria-label='Izquierda'>‹</button><button class='key ok' data-key='ok'>OK</button><button class='key right' data-key='right' aria-label='Derecha'>›</button><button class='key down' data-key='down' aria-label='Abajo'>⌄</button></div><div class='bar'><button data-key='volume_down' aria-label='Bajar volumen'>−</button><button data-key='mute' aria-label='Silenciar'>◖×</button><button data-key='volume_up' aria-label='Subir volumen'>＋</button></div><div class='bar'><button data-key='previous' aria-label='Anterior'>◀◀</button><button data-key='play_pause' aria-label='Reproducir o pausar'>▶Ⅱ</button><button data-key='next' aria-label='Siguiente'>▶▶</button></div><p class='tip'>Flechas, volumen y reproducción · Atrás e Inicio</p><button class='reconnect' id='forget'>Desconectar este teléfono</button></div>"
-            + "</section></main><script>var pairbox=document.getElementById('pairbox'),remote=document.getElementById('remote'),msg=document.getElementById('msg');function readToken(){try{return localStorage.getItem('polaroidRemoteToken')||''}catch(e){return ''}}var token=readToken();function post(path,data){var body=Object.keys(data).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(data[k])}).join('&');return fetch(path,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body})}function showRemote(){pairbox.className='pairbox hide';remote.className='remote show'}function clearSession(message){token='';try{localStorage.removeItem('polaroidRemoteToken')}catch(e){}remote.className='remote';pairbox.className='pairbox';msg.textContent=message||''}function pair(){var pin=document.getElementById('pin').value.replace(/\\D/g,'');post('/pair',{pin:pin}).then(function(r){if(!r.ok)throw 0;return r.json()}).then(function(d){token=d.token;try{localStorage.setItem('polaroidRemoteToken',token)}catch(e){}showRemote();msg.textContent=''}).catch(function(){msg.textContent='PIN incorrecto. Revisa el código de la TV.'})}document.getElementById('pair').onclick=pair;document.getElementById('pin').onkeydown=function(e){if(e.key==='Enter')pair()};document.querySelectorAll('[data-key]').forEach(function(b){b.onclick=function(){post('/key',{token:token,key:b.getAttribute('data-key')}).then(function(r){if(r.status===401)clearSession('La sesión venció. Empareja otra vez con el PIN de la TV.')}).catch(function(){msg.textContent='No hay conexión con la TV.'})}});document.getElementById('forget').onclick=function(){post('/unpair',{token:token}).catch(function(){});clearSession('Sesión desconectada.')};if(token){post('/resume',{token:token}).then(function(r){if(r.ok)showRemote();else clearSession('Empareja con el PIN actual de la TV.')}).catch(function(){clearSession('No hay conexión con la TV.')})}</script></body></html>";
+
 }

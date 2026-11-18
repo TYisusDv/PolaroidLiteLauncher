@@ -2,8 +2,10 @@ package tv.polaroid.litehome;
 
 import android.accessibilityservice.AccessibilityService;
 import android.accessibilityservice.GestureDescription;
+import android.content.Intent;
 import android.graphics.Path;
 import android.graphics.Rect;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -67,6 +69,18 @@ public final class RemoteAccessibilityService extends AccessibilityService {
     private void performRemoteAction(String action) {
         if (RemoteMediaActions.dispatch(this, action)) {
             return;
+        } else if (action.startsWith("text:")) {
+            setFocusedText(action.substring(5));
+        } else if ("power".equals(action)) {
+            performGlobalAction(GLOBAL_ACTION_POWER_DIALOG);
+        } else if ("voice".equals(action)) {
+            try {
+                Intent voice = new Intent("android.intent.action.VOICE_COMMAND");
+                voice.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(voice);
+            } catch (Exception ignored) { }
+        } else if ("apps".equals(action)) {
+            HomeActivity.openAppsPage(this);
         } else if ("home".equals(action)) {
             performGlobalAction(GLOBAL_ACTION_HOME);
         } else if ("back".equals(action)) {
@@ -79,6 +93,20 @@ public final class RemoteAccessibilityService extends AccessibilityService {
             if (launcherIsActive && HomeActivity.dispatchRemoteKey(action)) return;
             navigateAccessibilityTree(action);
         }
+    }
+
+    private void setFocusedText(String value) {
+        AccessibilityNodeInfo root = getRootInActiveWindow();
+        if (root == null) return;
+        AccessibilityNodeInfo focused = root.findFocus(AccessibilityNodeInfo.FOCUS_INPUT);
+        if (focused == null) focused = root.findFocus(AccessibilityNodeInfo.FOCUS_ACCESSIBILITY);
+        if (focused != null) {
+            Bundle arguments = new Bundle();
+            arguments.putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value);
+            focused.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments);
+            focused.recycle();
+        }
+        root.recycle();
     }
 
     private void navigateAccessibilityTree(String action) {

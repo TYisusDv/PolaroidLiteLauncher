@@ -29,6 +29,7 @@ public final class PackageManagerAppsRepository implements AppsRepository {
         collect(pm, new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LEANBACK_LAUNCHER), found);
         collect(pm, new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), found);
         addDownloadsShortcut(pm, found);
+        addMultimediaShortcut(pm, found);
         found.remove(context.getPackageName());
         ArrayList<InstalledApp> apps = new ArrayList<>(found.values());
         Collections.sort(apps, new Comparator<InstalledApp>() {
@@ -54,11 +55,30 @@ public final class PackageManagerAppsRepository implements AppsRepository {
         } catch (PackageManager.NameNotFoundException ignored) { }
     }
 
+    private void addMultimediaShortcut(PackageManager pm, LinkedHashMap<String, InstalledApp> found) {
+        String pkg = "com.cvte.tv.media";
+        if (found.containsKey(pkg)) return;
+        try {
+            ComponentName activity = new ComponentName(pkg, "com.cvte.tv.media.MediaCenterActivity");
+            Drawable icon = pm.getActivityIcon(activity);
+            Intent launch = new Intent(Intent.ACTION_MAIN);
+            launch.setComponent(activity);
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            Drawable banner = null;
+            try { banner = pm.getActivityBanner(activity); }
+            catch (Exception ignored) { }
+            if (banner == null) try { banner = pm.getApplicationBanner(pkg); }
+            catch (Exception ignored) { }
+            found.put(pkg, new InstalledApp(pkg, "Multimedia", icon, banner, launch));
+        } catch (PackageManager.NameNotFoundException ignored) { }
+    }
+
     private void collect(PackageManager pm, Intent query, LinkedHashMap<String, InstalledApp> found) {
         List<ResolveInfo> matches = pm.queryIntentActivities(query, 0);
         for (ResolveInfo info : matches) {
             if (info.activityInfo == null) continue;
             String pkg = info.activityInfo.packageName;
+            if ("com.cvte.tv.androidsetting".equals(pkg)) continue;
             if (found.containsKey(pkg) || pkg.equals(context.getPackageName())) continue;
             CharSequence label = info.loadLabel(pm);
             String appLabel = label == null ? pkg : label.toString();
