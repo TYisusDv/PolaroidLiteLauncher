@@ -1,0 +1,25 @@
+# Gradle and Android build output
+.gradle/
+**/build/
+**/.cxx/
+**/.externalNativeBuild/
+**/.kotlin/
+local.properties
+**/local.properties
+
+# Android Studio
+.idea/
+*.iml
+captures/
+
+# Generated distributables (keep device APK backups under outputs/AppBackups)
+/outputs/*.apk
+/outputs/*.apk.idsig
+/outputs/*.idsig
+/outputs/*.aab
+/release/*.apk
+/release/*.aab
+
+# Signing material must stay local
+*.jks
+*.keystore

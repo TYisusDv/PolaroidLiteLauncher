@@ -1,7 +1,0 @@
-#Tue Nov 17 07:31:06 CST 2026
-base.1=/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/intermediates/dex/debug/mergeProjectDexDebug/1/classes.dex
-path.1=1/classes.dex
-base.0=/home/tyisusdv/Documents/Projects/PolaroidLiteLauncher/app/build/intermediates/dex/debug/mergeProjectDexDebug/0/classes.dex
-renamed.1=classes2.dex
-renamed.0=classes.dex
-path.0=0/classes.dex
