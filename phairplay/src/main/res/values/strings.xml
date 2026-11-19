@@ -40,8 +40,7 @@
     <string name="protocol_detail_service_stopped">Start the service to advertise</string>
     <string name="protocol_detail_restarting">Restarting the receiver…</string>
     <string name="protocol_detail_waiting">Waiting for sender…</string>
-    <!-- %1$s = sender display name -->
-    <string name="protocol_detail_connected">Streaming from %1$s</string>
+    <string name="protocol_detail_connected">Receiving content</string>
     <string name="protocol_detail_error">Check Wi-Fi settings</string>
 
     <!-- ── Service states (header badge) ───────────────────────── -->

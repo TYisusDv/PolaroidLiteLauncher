@@ -29,7 +29,7 @@
     <string name="protocol_detail_service_stopped">Inicia el receptor para anunciarlo</string>
     <string name="protocol_detail_restarting">Reiniciando receptor…</string>
     <string name="protocol_detail_waiting">Esperando un dispositivo…</string>
-    <string name="protocol_detail_connected">Transmitiendo desde %1$s</string>
+    <string name="protocol_detail_connected">Recibiendo contenido</string>
     <string name="protocol_detail_error">Revisa la conexión Wi-Fi</string>
     <string name="service_state_running">Activo</string>
     <string name="service_state_stopped">Detenido</string>

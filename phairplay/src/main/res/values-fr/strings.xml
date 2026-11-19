@@ -40,7 +40,7 @@
     <string name="protocol_detail_restarting">Redémarrage du récepteur…</string>
     <string name="protocol_detail_waiting">En attente de l\'émetteur…</string>
     <!-- %1$s = sender display name -->
-    <string name="protocol_detail_connected">Diffusion depuis %1$s</string>
+    <string name="protocol_detail_connected">Réception de contenu</string>
     <string name="protocol_detail_error">Vérifiez les paramètres Wi-Fi</string>
 
     <!-- ── Service states (header badge) ───────────────────────── -->

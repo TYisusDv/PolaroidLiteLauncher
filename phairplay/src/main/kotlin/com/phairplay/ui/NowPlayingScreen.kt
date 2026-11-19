@@ -2,7 +2,9 @@ package com.phairplay.ui
 
 import android.content.Context
 import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.TransitionDrawable
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
@@ -36,9 +38,11 @@ class NowPlayingScreen @JvmOverloads constructor(
     private val artistView: TextView
     private val albumView: TextView
     private val senderView: TextView
+    private val defaultBackground: Int
 
     init {
-        setBackgroundColor(color(R.color.background_dark))
+        defaultBackground = color(R.color.background_dark)
+        setBackgroundColor(defaultBackground)
 
         val column = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
@@ -90,10 +94,15 @@ class NowPlayingScreen @JvmOverloads constructor(
         // outside the decode budget instead of allocating it.
         val bitmap = info.artwork?.let { SafeBitmapDecoder.decode(it) }
         if (bitmap != null) {
+            updateArtworkBackground(bitmap)
             artwork.scaleType = ImageView.ScaleType.CENTER_CROP
             artwork.setImageBitmap(bitmap)
             artwork.setColorFilter(null)
         } else {
+            transitionBackgroundTo(GradientDrawable().apply {
+                colors = intArrayOf(defaultBackground, Color.BLACK)
+                orientation = GradientDrawable.Orientation.TOP_BOTTOM
+            })
             // No artwork from the sender (typical for raw system audio) — show the AirPlay glyph.
             artwork.scaleType = ImageView.ScaleType.CENTER_INSIDE
             artwork.setImageResource(R.drawable.ic_airplay)
@@ -115,6 +124,71 @@ class NowPlayingScreen @JvmOverloads constructor(
     /** Releases the (potentially large) artwork bitmap when the card is hidden. */
     fun clear() {
         artwork.setImageDrawable(null)
+        setBackgroundColor(defaultBackground)
+    }
+
+    /** Samples the supplied cover and uses its dominant colors for a dark, readable backdrop. */
+    private fun updateArtworkBackground(bitmap: android.graphics.Bitmap) {
+        val bins = Array(HUE_BINS) { FloatArray(4) } // weight, red, green, blue
+        var totalWeight = 0f
+        var red = 0f
+        var green = 0f
+        var blue = 0f
+        val hsv = FloatArray(3)
+        val sampleCount = 24
+        for (y in 0 until sampleCount) {
+            val py = ((y + 0.5f) * bitmap.height / sampleCount).toInt().coerceIn(0, bitmap.height - 1)
+            for (x in 0 until sampleCount) {
+                val px = ((x + 0.5f) * bitmap.width / sampleCount).toInt().coerceIn(0, bitmap.width - 1)
+                val pixel = bitmap.getPixel(px, py)
+                if (Color.alpha(pixel) < 128) continue
+                Color.colorToHSV(pixel, hsv)
+                val weight = (0.15f + hsv[1]) * (0.2f + hsv[2])
+                totalWeight += weight
+                red += Color.red(pixel) * weight
+                green += Color.green(pixel) * weight
+                blue += Color.blue(pixel) * weight
+                if (hsv[1] > 0.18f) {
+                    val bin = (hsv[0] / 360f * HUE_BINS).toInt().coerceIn(0, HUE_BINS - 1)
+                    bins[bin][0] += weight
+                    bins[bin][1] += Color.red(pixel) * weight
+                    bins[bin][2] += Color.green(pixel) * weight
+                    bins[bin][3] += Color.blue(pixel) * weight
+                }
+            }
+        }
+        if (totalWeight <= 0f) return
+        val average = Color.rgb((red / totalWeight).toInt(), (green / totalWeight).toInt(), (blue / totalWeight).toInt())
+        val dominantBin = bins.maxBy { it[0] }
+        val accent = if (dominantBin[0] > 0f) {
+            Color.rgb((dominantBin[1] / dominantBin[0]).toInt(), (dominantBin[2] / dominantBin[0]).toInt(), (dominantBin[3] / dominantBin[0]).toInt())
+        } else average
+        transitionBackgroundTo(GradientDrawable().apply {
+            colors = intArrayOf(darken(accent, 0.28f), darken(average, 0.17f), defaultBackground)
+            orientation = GradientDrawable.Orientation.TL_BR
+        })
+    }
+
+    private fun darken(color: Int, value: Float): Int {
+        val hsv = FloatArray(3)
+        Color.colorToHSV(color, hsv)
+        hsv[1] *= 0.72f
+        hsv[2] = value
+        return Color.HSVToColor(hsv)
+    }
+
+    private fun transitionBackgroundTo(drawable: android.graphics.drawable.Drawable) {
+        // Keep transitions shallow when metadata updates arrive during a track.
+        val current = background
+        val previous = if (current is TransitionDrawable) {
+            current.getDrawable(1)
+        } else {
+            current ?: ColorDrawable(defaultBackground)
+        }
+        background = TransitionDrawable(arrayOf(previous, drawable)).apply {
+            isCrossFadeEnabled = true
+            startTransition(BACKGROUND_TRANSITION_MS)
+        }
     }
 
     private fun TextView.setTextVisible(value: String?) {
@@ -145,5 +219,7 @@ class NowPlayingScreen @JvmOverloads constructor(
         private const val ARTIST_SP = 22f
         private const val ALBUM_SP = 17f
         private const val SENDER_SP = 16f
+        private const val HUE_BINS = 12
+        private const val BACKGROUND_TRANSITION_MS = 600
     }
 }
