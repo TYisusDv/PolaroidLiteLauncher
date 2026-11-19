@@ -218,6 +218,7 @@ class MainActivity : AppCompatActivity() {
             if (homeIntent != null && homeIntent.component?.className != MainActivity::class.java.name) {
                 returnToLiteHomeAfterStream = false
                 incomingStreamWasShown = false
+                homeIntent.putExtra("open_tab", "PhairPlay")
                 homeIntent.addFlags(
                     android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
                         android.content.Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or

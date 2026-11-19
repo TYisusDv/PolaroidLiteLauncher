@@ -23,6 +23,8 @@ adb shell am start -n tv.polaroid.litehome/.HomeActivity
 
 Desde Inicio, selecciona el botón Cast para entrar a PhairPlay. En Receptor se ve el estado y en Ajustes se configuran los protocolos y preferencias.
 
+Cuando se detiene una transmisión que PhairPlay abrió sobre Lite Home, regresa a Lite Home con la sección PhairPlay seleccionada y el aside en Receptor. Funciona tanto si el launcher seguía vivo en segundo plano como si Android debe crear de nuevo su actividad.
+
 ## Compatibilidad de referencia
 
 La integración se compiló e instaló en la Polaroid de referencia:

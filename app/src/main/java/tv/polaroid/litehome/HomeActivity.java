@@ -128,14 +128,25 @@ public final class HomeActivity extends FragmentActivity {
         });
         buildShell();
         loadApps();
-        showTab("Apps".equals(getIntent().getStringExtra("open_tab")) ? "Apps" : "Inicio", false);
+        String requestedTab = getIntent().getStringExtra("open_tab");
+        if ("Apps".equals(requestedTab) || "PhairPlay".equals(requestedTab)) {
+            showTab(requestedTab, false);
+        } else {
+            showTab("Inicio", false);
+        }
         updateClock();
     }
 
     @Override protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
-        if ("Apps".equals(intent.getStringExtra("open_tab"))) showTab("Apps", true);
+        String requestedTab = intent.getStringExtra("open_tab");
+        if ("PhairPlay".equals(requestedTab)) {
+            selectedPhairPlaySection = "Receptor";
+            showTab("PhairPlay", true);
+        } else if ("Apps".equals(requestedTab)) {
+            showTab("Apps", true);
+        }
     }
 
     @Override protected void onResume() {
