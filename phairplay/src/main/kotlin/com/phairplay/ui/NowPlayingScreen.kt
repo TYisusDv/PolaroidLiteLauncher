@@ -186,7 +186,10 @@ class NowPlayingScreen @JvmOverloads constructor(
             current ?: ColorDrawable(defaultBackground)
         }
         background = TransitionDrawable(arrayOf(previous, drawable)).apply {
-            isCrossFadeEnabled = true
+            // Keep the previous background fully opaque while the new colors fade in.
+            // Cross-fading both layers lowers their combined alpha on some Android TV
+            // renderers, briefly exposing the Activity (Lite Home) underneath.
+            isCrossFadeEnabled = false
             startTransition(BACKGROUND_TRANSITION_MS)
         }
     }

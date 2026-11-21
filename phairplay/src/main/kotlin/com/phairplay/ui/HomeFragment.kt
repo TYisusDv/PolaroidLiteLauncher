@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.os.Bundle
 import android.os.IBinder
@@ -15,7 +16,10 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
+import com.phairplay.MainActivity
 import com.phairplay.R
+import com.phairplay.airplay.NowPlayingInfo
+import com.phairplay.service.ActiveConnection
 import com.phairplay.service.PhairPlayService
 import com.phairplay.service.Protocol
 import com.phairplay.service.ProtocolState
@@ -47,6 +51,9 @@ class HomeFragment : Fragment() {
     // Last observed service state — used to phrase the "Disabled" hint on the
     // protocol cards correctly (see disabledDetailRes()).
     private var currentServiceState: ServiceState = ServiceState.Stopped
+    private var currentNowPlaying: NowPlayingInfo? = null
+    private var currentConnection: ActiveConnection? = null
+    private var airPlayState: ProtocolState = ProtocolState.DISABLED
 
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
@@ -71,6 +78,10 @@ class HomeFragment : Fragment() {
     private lateinit var cardMiracast: View
     private lateinit var cardCast: View
     private lateinit var cardDlna: View
+    private lateinit var cardPlaybackSummary: View
+    private lateinit var imagePlaybackArtwork: android.widget.ImageView
+    private lateinit var textPlaybackTitle: TextView
+    private lateinit var textPlaybackDetail: TextView
     private lateinit var btnStart: Button
     private lateinit var btnStop: Button
     private lateinit var btnRestart: Button
@@ -82,6 +93,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         bindViews(view)
         configureProtocolCards()
+        configurePlaybackSummary()
         configureButtons()
         showDeviceName()
     }
@@ -111,6 +123,10 @@ class HomeFragment : Fragment() {
         cardMiracast     = view.findViewById(R.id.card_miracast)
         cardCast         = view.findViewById(R.id.card_cast)
         cardDlna         = view.findViewById(R.id.card_dlna)
+        cardPlaybackSummary = view.findViewById(R.id.card_playback_summary)
+        imagePlaybackArtwork = view.findViewById(R.id.img_playback_artwork)
+        textPlaybackTitle = view.findViewById(R.id.text_playback_title)
+        textPlaybackDetail = view.findViewById(R.id.text_playback_detail)
         btnStart         = view.findViewById(R.id.btn_start)
         btnStop          = view.findViewById(R.id.btn_stop)
         btnRestart       = view.findViewById(R.id.btn_restart)
@@ -151,6 +167,15 @@ class HomeFragment : Fragment() {
         }
     }
 
+    private fun configurePlaybackSummary() {
+        cardPlaybackSummary.setOnClickListener {
+            val intent = Intent(requireContext(), MainActivity::class.java)
+                .putExtra(MainActivity.EXTRA_RETURN_TO_LITE_HOME, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            startActivity(intent)
+        }
+    }
+
     /**
      * Shows the device's AirPlay name on the HomeScreen so the user knows
      * what to look for in their sender's picker.
@@ -169,21 +194,84 @@ class HomeFragment : Fragment() {
      */
     private fun observeServiceState() {
         val svc = service ?: return
+        // A service bind can complete after onStop()/onDestroyView() (for example when
+        // the stream Activity replaces the embedded PhairPlay screen). Do not ask the
+        // Fragment for viewLifecycleOwner unless its view is still attached.
+        if (view == null || !isAdded) {
+            Logger.d("HomeFragment: ignoring service callback because its view is unavailable")
+            return
+        }
+        val viewOwner = viewLifecycleOwnerLiveData.value ?: run {
+            Logger.d("HomeFragment: ignoring service callback after its view was removed")
+            return
+        }
 
-        viewLifecycleOwner.lifecycleScope.launch {
+        viewOwner.lifecycleScope.launch {
             svc.serviceState.collectLatest { state -> updateServiceStateBadge(state) }
         }
-        viewLifecycleOwner.lifecycleScope.launch {
-            svc.airPlayState.collectLatest { state -> updateProtocolCard(cardAirPlay, state) }
+        viewOwner.lifecycleScope.launch {
+            svc.airPlayState.collectLatest { state ->
+                airPlayState = state
+                updateProtocolCard(cardAirPlay, state)
+                updatePlaybackSummary()
+            }
         }
-        viewLifecycleOwner.lifecycleScope.launch {
+        viewOwner.lifecycleScope.launch {
+            svc.nowPlaying.collectLatest { info ->
+                currentNowPlaying = info
+                updatePlaybackSummary()
+            }
+        }
+        viewOwner.lifecycleScope.launch {
+            svc.activeConnection.collectLatest { connection ->
+                currentConnection = connection
+                updatePlaybackSummary()
+            }
+        }
+        viewOwner.lifecycleScope.launch {
             svc.miracastState.collectLatest { state -> updateProtocolCard(cardMiracast, state) }
         }
-        viewLifecycleOwner.lifecycleScope.launch {
+        viewOwner.lifecycleScope.launch {
             svc.castState.collectLatest { state -> updateProtocolCard(cardCast, state) }
         }
-        viewLifecycleOwner.lifecycleScope.launch {
+        viewOwner.lifecycleScope.launch {
             svc.dlnaState.collectLatest { state -> updateProtocolCard(cardDlna, state) }
+        }
+    }
+
+    private fun updatePlaybackSummary() {
+        val info = currentNowPlaying
+        val connection = currentConnection
+        val active = info != null || connection != null || airPlayState == ProtocolState.CONNECTED
+        cardPlaybackSummary.visibility = if (active) View.VISIBLE else View.GONE
+        if (!active) return
+
+        val sender = connection?.senderName?.takeIf { it.isNotBlank() }
+            ?: info?.senderName
+            ?: getString(R.string.protocol_airplay)
+        val title = info?.title?.takeIf { it.isNotBlank() }
+            ?: if (info != null) getString(R.string.now_playing_audio)
+            else if (connection?.protocol == Protocol.AIRPLAY || airPlayState == ProtocolState.CONNECTED) {
+                getString(R.string.playback_screen_sharing)
+            } else {
+                getString(R.string.protocol_detail_connected)
+            }
+        val detail = info?.artist?.takeIf { it.isNotBlank() }
+            ?: getString(R.string.playback_from_sender, sender)
+        textPlaybackTitle.text = title
+        textPlaybackDetail.text = detail
+        cardPlaybackSummary.contentDescription = getString(R.string.playback_card_description, title, detail)
+
+        val artwork = info?.artwork
+        val bitmap = artwork?.let { bytes ->
+            runCatching { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }.getOrNull()
+        }
+        if (bitmap != null) {
+            imagePlaybackArtwork.setImageBitmap(bitmap)
+            imagePlaybackArtwork.clearColorFilter()
+        } else {
+            imagePlaybackArtwork.setImageResource(R.drawable.ic_airplay)
+            imagePlaybackArtwork.setColorFilter(Color.WHITE)
         }
     }
 

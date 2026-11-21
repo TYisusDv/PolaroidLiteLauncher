@@ -76,6 +76,11 @@
     <string name="streaming_hint">Presiona Atrás para detener la transmisión</string>
     <string name="now_playing_audio">Reproduciendo audio</string>
     <string name="now_playing_from">Audio de %1$s</string>
+    <string name="playback_screen_sharing">Pantalla compartida</string>
+    <string name="playback_from_sender">Desde %1$s</string>
+    <string name="playback_reopen_hint">Selecciona para volver a la reproducción</string>
+    <string name="playback_artwork_description">Carátula de la reproducción actual</string>
+    <string name="playback_card_description">%1$s. %2$s. Selecciona para volver a la reproducción.</string>
     <string name="pairing_pin_title">Código de vinculación AirPlay</string>
     <string name="pairing_pin_hint">Ingresa este código en tu dispositivo para conectar</string>
     <string name="error_network_unavailable">Sin Wi-Fi. Conecta la TV a una red.</string>

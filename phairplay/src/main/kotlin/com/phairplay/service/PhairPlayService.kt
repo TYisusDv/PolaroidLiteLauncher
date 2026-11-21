@@ -267,8 +267,7 @@ class PhairPlayService : Service() {
         }
         val intent = Intent(this, MainActivity::class.java).addFlags(
             Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_REORDER_TO_FRONT or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
+                Intent.FLAG_ACTIVITY_CLEAR_TASK
         ).putExtra(MainActivity.EXTRA_RETURN_TO_LITE_HOME, true)
         runCatching { startActivity(intent) }
             .onFailure { Logger.e("Could not bring MainActivity to front", it) }

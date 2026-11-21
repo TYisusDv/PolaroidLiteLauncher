@@ -110,6 +110,11 @@
     <!-- ── Now playing (audio-only screen) ─────────────────────── -->
     <string name="now_playing_audio">Playing audio</string>
     <string name="now_playing_from">Audio from %1$s</string>
+    <string name="playback_screen_sharing">Screen sharing</string>
+    <string name="playback_from_sender">From %1$s</string>
+    <string name="playback_reopen_hint">Select to reopen playback</string>
+    <string name="playback_artwork_description">Current playback artwork</string>
+    <string name="playback_card_description">%1$s. %2$s. Select to reopen playback.</string>
 
     <!-- ── Pairing PIN (access control) ─────────────────────────── -->
     <string name="pairing_pin_title">AirPlay pairing code</string>

@@ -111,6 +111,11 @@
     <string name="now_playing_audio">Audio wird wiedergegeben</string>
     <!-- %1$s = audio source -->
     <string name="now_playing_from">Audio von %1$s</string>
+    <string name="playback_screen_sharing">Bildschirm wird geteilt</string>
+    <string name="playback_from_sender">Von %1$s</string>
+    <string name="playback_reopen_hint">Auswählen, um die Wiedergabe zu öffnen</string>
+    <string name="playback_artwork_description">Cover der aktuellen Wiedergabe</string>
+    <string name="playback_card_description">%1$s. %2$s. Auswählen, um die Wiedergabe zu öffnen.</string>
 
     <!-- ── Pairing PIN (access control) ─────────────────────────── -->
     <string name="pairing_pin_title">AirPlay-Kopplungscode</string>
