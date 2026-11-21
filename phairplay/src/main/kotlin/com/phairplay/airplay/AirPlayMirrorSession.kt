@@ -5,6 +5,7 @@ import com.phairplay.airplay.handshake.AirPlayNtpClient
 import com.phairplay.airplay.handshake.AudioStreamServer
 import com.phairplay.airplay.handshake.BufferedAudioServer
 import com.phairplay.airplay.handshake.MirrorStreamServer
+import com.phairplay.airplay.handshake.AirPlayEventChannel
 import com.phairplay.service.ProtocolState
 import com.phairplay.util.Logger
 import kotlinx.coroutines.CoroutineScope
@@ -59,6 +60,7 @@ internal class AirPlayMirrorSession(
     @Volatile private var ntpClient: AirPlayNtpClient? = null
     @Volatile private var eventSocket: ServerSocket? = null
     @Volatile private var eventClientSocket: java.net.Socket? = null
+    @Volatile private var eventChannel: AirPlayEventChannel? = null
     @Volatile private var mirrorAesKey: ByteArray? = null
     @Volatile private var mirrorEcdhSecret: ByteArray? = null
     @Volatile private var mirrorAesIv: ByteArray? = null
@@ -87,6 +89,7 @@ internal class AirPlayMirrorSession(
             try {
                 event.accept().use { s ->
                     eventClientSocket = s
+                    eventChannel = AirPlayEventChannel(s, ecdhSecret)
                     Logger.i("Event channel: macOS connected from ${s.inetAddress.hostAddress}")
                     val buf = ByteArray(4096)
                     val input = s.getInputStream()
@@ -114,7 +117,10 @@ internal class AirPlayMirrorSession(
     internal fun startMirrorStream(streamConnectionId: Long): Int {
         val aesKey = mirrorAesKey ?: run { Logger.e("mirror stream start before keys set"); return 0 }
         val ecdhSecret = mirrorEcdhSecret ?: return 0
-        return MirrorStreamServer(aesKey, ecdhSecret, streamConnectionId, videoSurfaceProvider, mirrorWidth, mirrorHeight)
+        return MirrorStreamServer(
+            aesKey, ecdhSecret, streamConnectionId, videoSurfaceProvider, mirrorWidth, mirrorHeight,
+            onKeyframeNeeded = { eventChannel?.requestKeyframe() }
+        )
             .also { mirrorServer = it; it.start(scope); nowPlaying.videoPlaying = true; nowPlaying.emitNowPlaying() }
             .dataPort
             .also { Logger.i("Mirror data server started on port $it") }
@@ -205,6 +211,7 @@ internal class AirPlayMirrorSession(
         ntpClient = null
         try { eventClientSocket?.close() } catch (e: Exception) { /* non-fatal */ }
         eventClientSocket = null
+        eventChannel = null
         try { eventSocket?.close() } catch (e: Exception) { /* non-fatal */ }
         eventSocket = null
         mirrorAesKey = null

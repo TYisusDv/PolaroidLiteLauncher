@@ -40,6 +40,7 @@ class MirrorStreamServer(
     private val height: Int = 1080,
     private val maxQueueBytes: Long = DEFAULT_MAX_QUEUE_BYTES,
     private val maxQueueItems: Int = DEFAULT_MAX_QUEUE_ITEMS,
+    private val onKeyframeNeeded: () -> Unit = {},
 ) {
     private val cipher = MirrorCrypto.streamCipher(aesKey, ecdhSecret, streamConnectionId)
     // OS-assigned free port, explicit IPv4 wildcard — see RtspHandler.bindRtspSocket() for why.
@@ -59,8 +60,8 @@ class MirrorStreamServer(
     private var framesIn = 0
     private var framesDropped = 0
     private var lastStatMs = 0L
-    // Set by the reader thread when a frame is dropped under load; the decoder thread then skips
-    // frames until the next keyframe (IDR) so it never decodes a reference-broken, corrupt stream.
+    // Set when a decoder is rebuilt or becomes unhealthy. Ordinary queue evictions and transient
+    // input misses request a refresh but keep decoding to avoid a permanent freeze without IDRs.
     @Volatile private var awaitingKeyframe = false
 
     /** The OS-assigned TCP port macOS should connect to (returned in the SETUP response). */
@@ -150,11 +151,17 @@ class MirrorStreamServer(
         if (!outcome.accepted) {
             // The item alone is bigger than the whole memory budget — it can never be queued.
             framesDropped++
-            awaitingKeyframe = true
+            // Rejecting one oversized frame is not a decoder failure. Keep consuming later
+            // pictures and ask the sender to refresh its reference frame instead of freezing
+            // the display until an IDR that some iPhones rarely send spontaneously.
+            onKeyframeNeeded()
             Logger.w("Mirror: dropped an oversized item (${item.sizeBytes} B > queue budget)")
         } else if (outcome.dropped > 0) {
             framesDropped += outcome.dropped
-            awaitingKeyframe = true      // a frame was lost — resync the decoder at the next IDR
+            // The decoder is merely behind after a resolution switch or a short burst. It can
+            // still render newer P-frames; gating on IDR here made video playback freeze after
+            // one queue eviction. Ask for an IDR, but continue the live decode in the meantime.
+            onKeyframeNeeded()
         }
         StreamStats.videoQueue = queue.size
         if (framesIn % 300 == 0) {
@@ -261,6 +268,7 @@ class MirrorStreamServer(
             if (!isKeyframe(annexB)) {
                 StreamStats.videoStage = "unhealthy: waiting IDR"
                 StreamStats.videoSkipped.incrementAndGet()
+                onKeyframeNeeded()
                 return
             }
             StreamStats.videoStage = "unhealthy: rebuilding"
@@ -275,6 +283,7 @@ class MirrorStreamServer(
             if (!isKeyframe(annexB)) {
                 StreamStats.videoStage = "waiting IDR"
                 StreamStats.videoSkipped.incrementAndGet()
+                onKeyframeNeeded()
                 return
             }
             awaitingKeyframe = false
@@ -284,8 +293,12 @@ class MirrorStreamServer(
         if (d.decodeNalUnit(annexB, framePtsUs)) {
             framePtsUs += FRAME_INTERVAL_US
         } else {
-            awaitingKeyframe = true
-            StreamStats.videoStage = "input dropped: waiting IDR"
+            // A single unavailable input slot drops one frame, not the decoder session. Keep
+            // feeding later frames through the live codec; otherwise an iPhone that sends IDRs
+            // only on request remains frozen forever. Actual codec errors still wait for an IDR.
+            awaitingKeyframe = !d.isHealthy
+            StreamStats.videoStage = if (awaitingKeyframe) "input dropped: waiting IDR" else "input miss: recovering"
+            onKeyframeNeeded()
             // Losing a new configuration's first IDR can freeze until the next rotation.
             // Retry it once on a fresh codec, with the current cached configuration.
             if (isKeyframe(annexB)) {

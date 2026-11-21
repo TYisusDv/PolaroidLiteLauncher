@@ -217,12 +217,13 @@ class VideoDecoder(private val outputSurface: Surface) {
                 StreamStats.videoSubmitted.incrementAndGet()
                 StreamStats.videoStage = "submitted"
             } else {
-                // The bounded wait expired. The caller will recreate the codec and, if this
-                // is the rotation's IDR, retry the SAME frame instead of losing its resync point.
+                // The bounded wait expired. This NAL was not submitted, but a temporary lack
+                // of an input slot does not mean the codec itself is unusable. Keep it alive:
+                // marking it unhealthy here made the stream discard every later P-frame until
+                // an IDR, and some AirPlay senders only produce another IDR when explicitly asked.
                 Logger.v("VideoDecoder: no input buffer available, dropping NAL unit")
                 StreamStats.videoInputMiss.incrementAndGet()
                 StreamStats.videoStage = "no input buffer"
-                isHealthy = false
             }
 
             // Release any output buffers that MediaCodec has finished decoding.

@@ -10,8 +10,8 @@ android {
         applicationId 'tv.polaroid.litehome'
         minSdk 24
         targetSdk 28
-        versionCode 40
-        versionName '3.26'
+        versionCode 42
+        versionName '3.28'
     }
     packaging {
         resources {
