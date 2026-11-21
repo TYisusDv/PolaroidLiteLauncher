@@ -151,6 +151,7 @@ internal class RtspServer(
     private fun handleClient(socket: Socket) {
         val inputStream = socket.getInputStream()
         val outputStream = socket.getOutputStream()
+        var mediaSessionActive = false
 
         // Fresh pairing + FairPlay state for each control connection.
         pairingSession = PairingSession(PairingKeys.get(context))
@@ -166,6 +167,22 @@ internal class RtspServer(
                 val request = requestReader.read(inputStream) ?: break
                 currentCSeq = request.headers["CSeq"]?.toIntOrNull() ?: 0
                 val response = router.routeRequest(request)
+
+                // A control connection is not necessarily a media session: iOS opens short
+                // connections for discovery/pairing and sends photos with PUT /photo. Treat only
+                // a successful RECORD or /play as media, otherwise a harmless disconnect would
+                // clear Now Playing and restart mDNS (eventually exhausting Android's NSD limit).
+                if (response.statusCode == 200) {
+                    when {
+                        request.method == "RECORD" -> mediaSessionActive = true
+                        request.method == "POST" && request.uri.substringBefore('?') == "/play" ->
+                            mediaSessionActive = true
+                        request.method == "POST" && request.uri.substringBefore('?') == "/stop" ->
+                            mediaSessionActive = false
+                        request.method == "TEARDOWN" && activeStreamTypes.isEmpty() ->
+                            mediaSessionActive = false
+                    }
+                }
                 sendResponse(outputStream, response)
 
                 // After RECORD on a legacy SDP session: a session WITH video switches to interleaved
@@ -204,7 +221,7 @@ internal class RtspServer(
             isMirrorSession = false
             activeStreamTypes.clear()
             setupCount = 0
-            onStreamingStopped()
+            if (mediaSessionActive) onStreamingStopped()
         }
     }
 
